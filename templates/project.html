@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ project.name }} - APK Editor</title>
+    <link href="https://cdn.replit.com/agent/bootstrap-agent-dark-theme.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://unpkg.com/feather-icons"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i data-feather="package"></i>
+                APK Editor
+            </a>
+            <div class="navbar-nav ms-auto">
+                <a class="nav-link" href="{{ url_for('index') }}">
+                    <i data-feather="arrow-left"></i>
+                    Back to Projects
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <!-- Flash Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Project Header -->
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h2 class="card-title mb-1">{{ project.name }}</h2>
+                        <p class="text-muted mb-0">
+                            <i data-feather="file"></i>
+                            {{ project.original_apk }}
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="btn-group">
+                            <a href="{{ url_for('compile_apk', project_id=project.id) }}" class="btn btn-success">
+                                <i data-feather="package"></i>
+                                Compile APK
+                            </a>
+                            {% if project.has_compiled or project.has_signed %}
+                                <a href="{{ url_for('download_apk', project_id=project.id) }}" class="btn btn-outline-success">
+                                    <i data-feather="download"></i>
+                                    Download
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- APK Preview & GUI Modification Section -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="smartphone"></i>
+                    APK Preview & GUI Modification
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <!-- Phone Preview -->
+                    <div class="col-md-4">
+                        <div class="smartphone-preview">
+                            <div class="phone-frame">
+                                <div class="phone-screen">
+                                    <div class="status-bar">
+                                        <span class="time">9:41</span>
+                                        <span class="battery">100%</span>
+                                    </div>
+                                    <div class="app-content app-controller-bg">
+                                        <div class="app-header">
+                                            <h6 class="app-title">{{ project.name }}</h6>
+                                            <div class="connection-status">
+                                                <span class="status-dot"></span>
+                                                <span class="status-text">Not Connected</span>
+                                            </div>
+                                        </div>
+                                        <div class="app-body">
+                                            <div class="controller-grid">
+                                                <div class="control-section">
+                                                    <div class="control-knob large" title="Main Volume Control"></div>
+                                                    <div class="control-label">Main</div>
+                                                    <div class="control-desc">Volume Control</div>
+                                                </div>
+                                                <div class="control-section">
+                                                    <div class="directional-pad" title="Navigation Controls">
+                                                        <div class="dpad-center">
+                                                            <div class="dpad-up" title="Navigate Up"></div>
+                                                            <div class="dpad-left" title="Navigate Left"></div>
+                                                            <div class="dpad-right" title="Navigate Right"></div>
+                                                            <div class="dpad-down" title="Navigate Down"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="control-label">D-Pad</div>
+                                                    <div class="control-desc">Navigation</div>
+                                                </div>
+                                                <div class="control-section">
+                                                    <div class="control-knob medium" title="Volume Adjustment"></div>
+                                                    <div class="control-label">Vol</div>
+                                                    <div class="control-desc">Audio Level</div>
+                                                </div>
+                                                <div class="control-section">
+                                                    <div class="control-knob medium" title="Frequency Tuning"></div>
+                                                    <div class="control-label">Tune</div>
+                                                    <div class="control-desc">Frequency</div>
+                                                </div>
+                                            </div>
+                                            <div class="toolbar">
+                                                <div class="toolbar-icons">
+                                                    <i data-feather="settings" title="Settings"></i>
+                                                    <i data-feather="wifi" title="WiFi Connection"></i>
+                                                    <i data-feather="bluetooth" title="Bluetooth"></i>
+                                                    <i data-feather="volume-2" title="Audio Settings"></i>
+                                                    <i data-feather="power" title="Power Control"></i>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- GUI Modification Form -->
+                    <div class="col-md-8">
+                        <form method="POST" action="{{ url_for('modify_gui', project_id=project.id) }}" enctype="multipart/form-data">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <div class="mb-3">
+                                        <label for="gui_changes" class="form-label">Describe GUI Changes</label>
+                                        <textarea class="form-control" id="gui_changes" name="gui_changes" rows="4" 
+                                            placeholder="Example: Change control knob color to blue, make D-pad bigger, add glow effect to controls, change connection status..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="color_scheme" class="form-label">Color Scheme</label>
+                                        <select class="form-select" id="color_scheme" name="color_scheme">
+                                            <option value="">Keep Current</option>
+                                            <option value="blue">Blue Theme</option>
+                                            <option value="green">Green Theme</option>
+                                            <option value="red">Red Theme</option>
+                                            <option value="purple">Purple Theme</option>
+                                            <option value="orange">Orange Theme</option>
+                                            <option value="dark">Dark Theme</option>
+                                            <option value="light">Light Theme</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="reference_images" class="form-label">Reference Images (Optional)</label>
+                                        <input type="file" class="form-control" id="reference_images" name="reference_images" 
+                                            accept="image/*" multiple>
+                                        <div class="form-text">Upload reference images for design inspiration</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-center">
+                                <button type="submit" class="btn btn-primary">
+                                    <i data-feather="edit"></i>
+                                    Apply GUI Changes
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Resources Section -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="folder"></i>
+                    Project Resources
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if resources %}
+                    <div class="row">
+                        <!-- Images -->
+                        {% if resources.images %}
+                        <div class="col-md-4 mb-4">
+                            <h6><i data-feather="image"></i> Images</h6>
+                            <div class="list-group">
+                                {% for image in resources.images[:10] %}
+                                <a href="{{ url_for('edit_resource', project_id=project.id, resource_type='image', resource_path=image.path if image is mapping else image) }}" 
+                                   class="list-group-item list-group-item-action">
+                                    <i data-feather="file-text"></i>
+                                    {{ image.name if image is mapping else image.split('/')[-1] }}
+                                </a>
+                                {% endfor %}
+                                {% if resources.images|length > 10 %}
+                                <div class="list-group-item">
+                                    <small class="text-muted">... and {{ resources.images|length - 10 }} more</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Strings -->
+                        {% if resources.strings %}
+                        <div class="col-md-4 mb-4">
+                            <h6><i data-feather="type"></i> Strings</h6>
+                            <div class="list-group">
+                                {% for string in resources.strings[:10] %}
+                                <a href="{{ url_for('edit_resource', project_id=project.id, resource_type='string', resource_path=string.path if string is mapping else string) }}" 
+                                   class="list-group-item list-group-item-action">
+                                    <i data-feather="file-text"></i>
+                                    {{ string.name if string is mapping else string.split('/')[-1] }}
+                                </a>
+                                {% endfor %}
+                                {% if resources.strings|length > 10 %}
+                                <div class="list-group-item">
+                                    <small class="text-muted">... and {{ resources.strings|length - 10 }} more</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Layouts -->
+                        {% if resources.layouts %}
+                        <div class="col-md-4 mb-4">
+                            <h6><i data-feather="layout"></i> Layouts</h6>
+                            <div class="list-group">
+                                {% for layout in resources.layouts[:10] %}
+                                <a href="{{ url_for('edit_resource', project_id=project.id, resource_type='layout', resource_path=layout.path if layout is mapping else layout) }}" 
+                                   class="list-group-item list-group-item-action">
+                                    <i data-feather="file"></i>
+                                    {{ layout.name if layout is mapping else layout.split('/')[-1] }}
+                                </a>
+                                {% endfor %}
+                                {% if resources.layouts|length > 10 %}
+                                <div class="list-group-item">
+                                    <small class="text-muted">... and {{ resources.layouts|length - 10 }} more</small>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-4">
+                        <i data-feather="folder-x" class="text-muted" style="width: 48px; height: 48px;"></i>
+                        <h6 class="text-muted mt-3">No resources found</h6>
+                        <p class="text-muted">The APK might not have been properly decompiled</p>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Project Status -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="info"></i>
+                    Project Status
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i data-feather="file" class="text-primary mb-2" style="width: 32px; height: 32px;"></i>
+                            <h6>Decompiled</h6>
+                            <span class="badge bg-success">✓</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i data-feather="edit" class="text-warning mb-2" style="width: 32px; height: 32px;"></i>
+                            <h6>Modified</h6>
+                            <span class="badge bg-secondary">Ready</span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i data-feather="package" class="text-info mb-2" style="width: 32px; height: 32px;"></i>
+                            <h6>Compiled</h6>
+                            <span class="badge bg-{{ 'success' if project.has_compiled else 'secondary' }}">
+                                {{ '✓' if project.has_compiled else '○' }}
+                            </span>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="text-center">
+                            <i data-feather="check-circle" class="text-success mb-2" style="width: 32px; height: 32px;"></i>
+                            <h6>Signed</h6>
+                            <span class="badge bg-{{ 'success' if project.has_signed else 'secondary' }}">
+                                {{ '✓' if project.has_signed else '○' }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        feather.replace();
+    </script>
+</body>
+</html>
