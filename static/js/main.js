@@ -68,6 +68,12 @@ class APKEditor {
         if (testAiBtn) {
             testAiBtn.addEventListener('click', this.handleTestAI.bind(this));
         }
+
+        // Toggle API key visibility
+        const toggleKeyBtn = document.getElementById('toggle-key-visibility');
+        if (toggleKeyBtn) {
+            toggleKeyBtn.addEventListener('click', this.toggleApiKeyVisibility.bind(this));
+        }
     }
 
     initializeFeatherIcons() {
@@ -88,6 +94,9 @@ class APKEditor {
             if (fileName) {
                 fileName.textContent = `${file.name} (${fileSize})`;
             }
+
+            // Show file info
+            this.showNotification(`Selected: ${file.name} (${fileSize})`, 'info');
         }
     }
 
@@ -140,7 +149,7 @@ class APKEditor {
                 </div>
             `;
             
-            const contentContainer = document.querySelector('.container-fluid');
+            const contentContainer = document.querySelector('.container');
             if (contentContainer) {
                 contentContainer.appendChild(previewArea);
             }
@@ -274,6 +283,25 @@ class APKEditor {
             button.disabled = false;
             button.innerHTML = originalText;
         });
+    }
+
+    toggleApiKeyVisibility() {
+        const keyInput = document.getElementById('gemini_api_key');
+        const icon = document.querySelector('#toggle-key-visibility i');
+        
+        if (keyInput && icon) {
+            if (keyInput.type === 'password') {
+                keyInput.type = 'text';
+                icon.setAttribute('data-feather', 'eye-off');
+            } else {
+                keyInput.type = 'password';
+                icon.setAttribute('data-feather', 'eye');
+            }
+            
+            if (typeof feather !== 'undefined') {
+                feather.replace();
+            }
+        }
     }
 
     showNotification(message, type = 'info') {
