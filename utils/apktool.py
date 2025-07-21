@@ -173,8 +173,8 @@ class APKTool:
             if original_size == 0:
                 original_size = self._estimate_apk_size(decompiled_dir)
             
-            # Create realistic APK structure
-            with zipfile.ZipFile(output_apk, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as apk_zip:
+            # Create realistic APK structure with proper compression
+            with zipfile.ZipFile(output_apk, 'w', zipfile.ZIP_DEFLATED, compresslevel=9, allowZip64=False) as apk_zip:
                 
                 # Add AndroidManifest.xml
                 manifest_path = os.path.join(decompiled_dir, 'AndroidManifest.xml')
