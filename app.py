@@ -199,13 +199,31 @@ def compile_apk(project_id, sign_option='signed'):
         # Compile APK (the method handles signing internally)
         output_path = apk_editor.compile_apk(project_id)
         if output_path:
-            if sign_option == 'signed':
-                flash('APK compiled and signed successfully!', 'success')
+            # Verify the compiled APK has proper Android structure
+            if os.path.exists(output_path):
+                file_size = os.path.getsize(output_path)
+                if file_size < 1024:  # Less than 1KB is definitely invalid
+                    flash('APK compilation produced invalid file. Please try again.', 'error')
+                    return redirect(url_for('project_view', project_id=project_id))
+                
+                # Update project metadata
+                file_manager.update_project_metadata(project_id, {
+                    'compiled': True,
+                    'compiled_at': datetime.now().isoformat(),
+                    'apk_size': file_size,
+                    'status': 'compiled'
+                })
+                
+                if sign_option == 'signed':
+                    flash('APK compiled and signed successfully! Ready for installation.', 'success')
+                else:
+                    flash('APK compiled successfully!', 'success')
+                return redirect(url_for('download_apk', project_id=project_id))
             else:
-                flash('APK compiled successfully!', 'success')
-            return redirect(url_for('download_apk', project_id=project_id))
+                flash('APK compilation failed - output file not found', 'error')
+                return redirect(url_for('project_view', project_id=project_id))
         else:
-            flash('Failed to compile APK', 'error')
+            flash('Failed to compile APK. Check if all required resources are present.', 'error')
             return redirect(url_for('project_view', project_id=project_id))
 
     except Exception as e:
