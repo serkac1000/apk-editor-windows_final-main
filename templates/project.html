@@ -51,10 +51,22 @@
                     </div>
                     <div class="col-md-4 text-end">
                         <div class="btn-group">
-                            <a href="{{ url_for('compile_apk', project_id=project.id) }}" class="btn btn-success">
-                                <i data-feather="package"></i>
-                                Compile APK
-                            </a>
+                            <div class="btn-group me-2">
+                                <a href="{{ url_for('compile_apk', project_id=project.id, sign_option='signed') }}" class="btn btn-success">
+                                    <i data-feather="package"></i> Compile & Sign APK
+                                </a>
+                                <button type="button" class="btn btn-success dropdown-toggle dropdown-toggle-split" data-bs-toggle="dropdown">
+                                    <span class="visually-hidden">Toggle Dropdown</span>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{{ url_for('compile_apk', project_id=project.id, sign_option='signed') }}">
+                                        <i data-feather="shield-check"></i> Compile & Sign
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('compile_apk', project_id=project.id, sign_option='unsigned') }}">
+                                        <i data-feather="package"></i> Compile Only (Unsigned)
+                                    </a></li>
+                                </ul>
+                            </div>
                             {% if project.has_compiled or project.has_signed %}
                                 <a href="{{ url_for('download_apk', project_id=project.id) }}" class="btn btn-outline-success">
                                     <i data-feather="download"></i>

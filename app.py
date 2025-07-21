@@ -187,17 +187,24 @@ def save_resource(project_id, resource_type, resource_path):
                                resource_path=resource_path))
 
 @app.route('/compile/<project_id>')
-def compile_apk(project_id):
-    """Compile and sign APK"""
+@app.route('/compile/<project_id>/<sign_option>')
+def compile_apk(project_id, sign_option='signed'):
+    """Compile and optionally sign APK"""
     try:
         project = file_manager.get_project(project_id)
         if not project:
             flash('Project not found', 'error')
             return redirect(url_for('index'))
 
-        output_path = apk_editor.compile_apk(project_id)
+        # Determine if APK should be signed
+        should_sign = sign_option != 'unsigned'
+        
+        output_path = apk_editor.compile_apk(project_id, sign_apk=should_sign)
         if output_path:
-            flash('APK compiled successfully!', 'success')
+            if should_sign:
+                flash('APK compiled and signed successfully!', 'success')
+            else:
+                flash('APK compiled successfully (unsigned)!', 'success')
             return redirect(url_for('download_apk', project_id=project_id))
         else:
             flash('Failed to compile APK', 'error')
@@ -648,6 +655,53 @@ public class GeneratedHelper {
 // Usage example
 GeneratedHelper.executeGeneratedFunction(this);
 """
+
+@app.route('/preview/<project_id>/<resource_type>/<path:resource_path>')
+def preview_resource(project_id, resource_type, resource_path):
+    """Preview resource changes before saving"""
+    try:
+        project = file_manager.get_project(project_id)
+        if not project:
+            return jsonify({'error': 'Project not found'}), 404
+
+        # Get current resource content
+        current_content = apk_editor.get_resource_content(project_id, resource_type, resource_path)
+        
+        # Get preview content from request
+        preview_content = request.args.get('content', current_content)
+        
+        if resource_type == 'string':
+            # For strings, just return the text
+            return jsonify({
+                'type': 'string',
+                'content': preview_content,
+                'original': current_content
+            })
+        
+        elif resource_type == 'layout':
+            # For layouts, return XML with syntax highlighting info
+            return jsonify({
+                'type': 'layout',
+                'content': preview_content,
+                'original': current_content,
+                'valid_xml': is_valid_xml(preview_content)
+            })
+        
+        else:
+            return jsonify({'error': 'Preview not supported for this resource type'}), 400
+
+    except Exception as e:
+        logging.error(f"Preview error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+def is_valid_xml(xml_content):
+    """Check if XML content is valid"""
+    try:
+        import xml.etree.ElementTree as ET
+        ET.fromstring(xml_content)
+        return True
+    except ET.ParseError:
+        return False
 
 @app.route('/download_function/<function_id>')
 def download_function(function_id):
