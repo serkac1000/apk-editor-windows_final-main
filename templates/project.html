@@ -60,7 +60,7 @@
                                 </button>
                                 <ul class="dropdown-menu">
                                     <li><a class="dropdown-item" href="{{ url_for('compile_apk', project_id=project.id, sign_option='signed') }}">
-                                        <i data-feather="shield-check"></i> Compile & Sign
+                                        <i data-feather="shield"></i> Compile & Sign
                                     </a></li>
                                     <li><a class="dropdown-item" href="{{ url_for('compile_apk', project_id=project.id, sign_option='unsigned') }}">
                                         <i data-feather="package"></i> Compile Only (Unsigned)

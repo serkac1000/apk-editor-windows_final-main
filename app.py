@@ -196,15 +196,13 @@ def compile_apk(project_id, sign_option='signed'):
             flash('Project not found', 'error')
             return redirect(url_for('index'))
 
-        # Determine if APK should be signed
-        should_sign = sign_option != 'unsigned'
-        
-        output_path = apk_editor.compile_apk(project_id, sign_apk=should_sign)
+        # Compile APK (the method handles signing internally)
+        output_path = apk_editor.compile_apk(project_id)
         if output_path:
-            if should_sign:
+            if sign_option == 'signed':
                 flash('APK compiled and signed successfully!', 'success')
             else:
-                flash('APK compiled successfully (unsigned)!', 'success')
+                flash('APK compiled successfully!', 'success')
             return redirect(url_for('download_apk', project_id=project_id))
         else:
             flash('Failed to compile APK', 'error')
