@@ -1,15 +1,17 @@
 // APK Editor JavaScript functionality
+
 class APKEditor {
     constructor() {
         this.initializeEventListeners();
         this.initializeFeatherIcons();
+        this.currentProject = null;
     }
 
     initializeEventListeners() {
         // File upload handling
         const fileInput = document.getElementById('apk_file');
         if (fileInput) {
-            fileInput.addEventListener('change', this.handleFileSelection.bind(this));
+            fileInput.addEventListener('change', this.handleFileSelect.bind(this));
         }
 
         // Form submissions with loading states
@@ -19,15 +21,21 @@ class APKEditor {
         });
 
         // Preview functionality
-        const previewButtons = document.querySelectorAll('.preview-btn');
-        previewButtons.forEach(btn => {
-            btn.addEventListener('click', this.handlePreview.bind(this));
+        const previewButtons = document.querySelectorAll('.preview-resource');
+        previewButtons.forEach(button => {
+            button.addEventListener('click', this.handlePreview.bind(this));
         });
+
+        // Real-time preview for text editing
+        const contentTextarea = document.getElementById('content');
+        if (contentTextarea) {
+            contentTextarea.addEventListener('input', this.debounce(this.updatePreview.bind(this), 500));
+        }
 
         // Compile buttons
         const compileButtons = document.querySelectorAll('.compile-btn');
-        compileButtons.forEach(btn => {
-            btn.addEventListener('click', this.handleCompile.bind(this));
+        compileButtons.forEach(button => {
+            button.addEventListener('click', this.handleCompile.bind(this));
         });
 
         // API key form
@@ -41,6 +49,12 @@ class APKEditor {
         if (testAiBtn) {
             testAiBtn.addEventListener('click', this.testAI.bind(this));
         }
+
+        // GUI modification form
+        const guiForm = document.getElementById('gui-modification-form');
+        if (guiForm) {
+            guiForm.addEventListener('submit', this.handleGUIModification.bind(this));
+        }
     }
 
     initializeFeatherIcons() {
@@ -50,24 +64,19 @@ class APKEditor {
         }
     }
 
-    handleFileSelection(event) {
+    handleFileSelect(event) {
         const file = event.target.files[0];
-        const fileInfo = document.getElementById('file-info');
+        if (file) {
+            const fileName = file.name;
+            const fileSize = this.formatFileSize(file.size);
+            console.log(`Selected APK: ${fileName} (${fileSize})`);
 
-        if (file && fileInfo) {
-            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
-            fileInfo.innerHTML = `
-                <div class="alert alert-info">
-                    <i class="bi bi-file-earmark-zip"></i>
-                    Selected APK: ${file.name} (${fileSize} MB)
-                </div>
-            `;
-            console.log(`Selected APK: ${file.name} (${fileSize} MB)`);
-        }
-
-        const projectNameInput = document.getElementById('project_name');
-        if (projectNameInput && file) {
-            projectNameInput.value = file.name.replace('.apk', '');
+            // Update UI to show selected file
+            const label = document.querySelector('label[for="apk_file"]');
+            if (label) {
+                label.textContent = `Selected: ${fileName}`;
+                label.classList.add('text-success');
+            }
         }
     }
 
@@ -90,62 +99,101 @@ class APKEditor {
 
     handlePreview(event) {
         event.preventDefault();
-        const button = event.target;
-        const resourceType = button.dataset.resourceType;
-        const resourcePath = button.dataset.resourcePath;
-        const projectId = button.dataset.projectId;
+        const resourceType = event.target.dataset.resourceType;
+        const resourcePath = event.target.dataset.resourcePath;
 
-        this.showPreview(projectId, resourceType, resourcePath);
+        if (resourceType === 'string' || resourceType === 'layout') {
+            this.showTextPreview(resourceType, resourcePath);
+        } else if (resourceType === 'image') {
+            this.showImagePreview(resourcePath);
+        }
     }
 
-    showPreview(projectId, resourceType, resourcePath) {
+    showTextPreview(resourceType, resourcePath) {
+        const content = document.getElementById('content').value;
         const previewContainer = document.getElementById('preview-container');
-        if (!previewContainer) return;
 
-        let previewContent = '';
+        if (!previewContainer) {
+            this.createPreviewContainer();
+        }
 
+        const preview = document.getElementById('preview-content');
         if (resourceType === 'string') {
-            previewContent = this.getStringPreviewContent(resourcePath);
+            preview.innerHTML = this.generateStringPreview(content);
         } else if (resourceType === 'layout') {
-            previewContent = this.getLayoutPreviewContent(resourcePath);
-        } else {
-            previewContent = `<p>Preview not available for this resource type.</p>`;
+            preview.innerHTML = this.generateLayoutPreview(content);
         }
 
-        previewContainer.innerHTML = `
-            <div class="preview-app">
-                <div class="preview-header">App Preview</div>
-                <div class="preview-content">
-                    ${previewContent}
-                </div>
-            </div>
-        `;
+        document.getElementById('preview-container').style.display = 'block';
     }
 
-    getStringPreviewContent(resourcePath) {
-        return `
-            <div class="preview-text">Preview for string resource: ${resourcePath}</div>
-        `;
-    }
+    generateStringPreview(content) {
+        const parser = new DOMParser();
+        try {
+            const doc = parser.parseFromString(content, 'text/xml');
+            const strings = doc.querySelectorAll('string');
 
-    getLayoutPreviewContent(resourcePath) {
-        return `
-            <button id="preview-button" class="btn btn-primary">Sample Button</button>
-        `;
-    }
+            let previewHTML = '<div class="preview-app"><div class="preview-header">App Preview</div><div class="preview-content">';
 
-    updateStringPreview() {
-        const previewText = document.querySelector('.preview-text');
-        if (previewText) {
-            previewText.textContent = 'Updated text content';
+            strings.forEach(string => {
+                const name = string.getAttribute('name');
+                const value = string.textContent;
+
+                if (name === 'app_name') {
+                    previewHTML += `<h5>${value}</h5>`;
+                } else if (name.includes('button') || name.includes('btn')) {
+                    previewHTML += `<button class="btn btn-primary m-1" id="preview-button">${value}</button>`;
+                } else {
+                    previewHTML += `<div class="preview-text">${value}</div>`;
+                }
+            });
+
+            previewHTML += '</div></div>';
+            return previewHTML;
+        } catch (error) {
+            return '<div class="alert alert-warning">Invalid XML format</div>';
         }
     }
 
-    updateLayoutPreview() {
-        const previewButton = document.getElementById('preview-button');
-        if (previewButton) {
-            previewButton.style.backgroundColor = '#28a745';
-            previewButton.textContent = 'Modified Button';
+    generateLayoutPreview(content) {
+        // Basic layout preview - simplified representation
+        let previewHTML = '<div class="preview-app"><div class="preview-header">Layout Preview</div><div class="preview-content">';
+
+        if (content.includes('TextView')) {
+            previewHTML += '<div class="preview-text">Sample Text View</div>';
+        }
+        if (content.includes('Button')) {
+            previewHTML += '<button class="btn btn-primary m-1">Sample Button</button>';
+        }
+        if (content.includes('ImageView')) {
+            previewHTML += '<div class="bg-light p-3 m-1">📱 Image View</div>';
+        }
+
+        previewHTML += '</div></div>';
+        return previewHTML;
+    }
+
+    createPreviewContainer() {
+        const container = document.createElement('div');
+        container.id = 'preview-container';
+        container.className = 'preview-container mt-3';
+        container.innerHTML = `
+            <h6>Preview</h6>
+            <div id="preview-content"></div>
+        `;
+
+        const form = document.querySelector('form');
+        if (form) {
+            form.appendChild(container);
+        }
+    }
+
+    updatePreview() {
+        const resourceType = document.querySelector('input[name="resource_type"]')?.value;
+        const resourcePath = document.querySelector('input[name="resource_path"]')?.value;
+
+        if (resourceType && resourcePath) {
+            this.showTextPreview(resourceType, resourcePath);
         }
     }
 
@@ -153,11 +201,16 @@ class APKEditor {
         event.preventDefault();
         const button = event.target;
         const projectId = button.dataset.projectId;
+        const originalText = button.textContent;
 
-        this.showCompileProgress();
+        // Show loading state
+        button.disabled = true;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Compiling...';
 
-        // Redirect to compile endpoint
-        window.location.href = `/compile/${projectId}`;
+        // Follow the original href after showing loading state
+        setTimeout(() => {
+            window.location.href = `/compile/${projectId}`;
+        }, 100);
     }
 
     showCompileProgress() {
@@ -230,42 +283,55 @@ class APKEditor {
         });
     }
 
+    handleGUIModification(event) {
+        const button = event.target.querySelector('button[type="submit"]');
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Applying Changes...';
+        }
+    }
+
     // Utility methods
     formatFileSize(bytes) {
-        if (bytes === 0) return '0 Bytes';
+        if (bytes === 0) return '0 B';
         const k = 1024;
-        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const sizes = ['B', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
     }
 
-    showNotification(message, type = 'info') {
-        const alertClass = `alert-${type}`;
-        const alertHtml = `
-            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
-                ${message}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-
-        const container = document.querySelector('.container-fluid');
-        if (container) {
-            container.insertAdjacentHTML('afterbegin', alertHtml);
-        }
-    }
-
-    isValidXML(xmlString) {
-        try {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(xmlString, 'text/xml');
-            return !doc.querySelector('parsererror');
-        } catch (e) {
-            return false;
-        }
+    debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
     }
 }
 
 // Initialize APK Editor when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     window.apkEditor = new APKEditor();
+
+    // Initialize Feather icons
+    if (typeof feather !== 'undefined') {
+        feather.replace();
+    }
+
+    // Handle form submissions with loading states
+    const forms = document.querySelectorAll('form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function() {
+            const submitButton = form.querySelector('button[type="submit"]');
+            if (submitButton) {
+                submitButton.disabled = true;
+                const originalText = submitButton.textContent;
+                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+            }
+        });
+    });
 });
