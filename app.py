@@ -461,6 +461,56 @@ public void onGeneratedButtonClick(View view) {
 </shape>
 """
 
+@app.route('/save_gemini_key', methods=['POST'])
+def save_gemini_key():
+    """Save Gemini API key"""
+    try:
+        api_key = request.form.get('gemini_api_key', '').strip()
+        
+        if not api_key:
+            flash('Please enter a valid API key', 'error')
+            return redirect(url_for('index'))
+        
+        # Save to environment file (creates .env file)
+        env_file = '.env'
+        env_content = f'GEMINI_API_KEY={api_key}\n'
+        
+        # Read existing .env content if exists
+        if os.path.exists(env_file):
+            with open(env_file, 'r') as f:
+                existing_content = f.read()
+            
+            # Replace existing GEMINI_API_KEY or add it
+            lines = existing_content.split('\n')
+            updated_lines = []
+            key_found = False
+            
+            for line in lines:
+                if line.startswith('GEMINI_API_KEY='):
+                    updated_lines.append(f'GEMINI_API_KEY={api_key}')
+                    key_found = True
+                else:
+                    updated_lines.append(line)
+            
+            if not key_found:
+                updated_lines.append(f'GEMINI_API_KEY={api_key}')
+            
+            env_content = '\n'.join(updated_lines)
+        
+        with open(env_file, 'w') as f:
+            f.write(env_content)
+        
+        # Update environment variable for current session
+        os.environ['GEMINI_API_KEY'] = api_key
+        
+        flash('API key saved successfully! AI features are now enabled.', 'success')
+        return redirect(url_for('index'))
+        
+    except Exception as e:
+        logging.error(f"Save API key error: {str(e)}")
+        flash(f'Failed to save API key: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
 @app.route('/test_ai', methods=['POST'])
 def test_ai():
     """Test AI functionality"""

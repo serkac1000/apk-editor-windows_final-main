@@ -15,8 +15,8 @@ document.addEventListener('DOMContentLoaded', function() {
         fileInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file) {
-                fileName.textContent = file.name;
-                fileSize.textContent = formatFileSize(file.size);
+                if (fileName) fileName.textContent = file.name;
+                if (fileSize) fileSize.textContent = formatFileSize(file.size);
                 console.log(`Selected APK: ${file.name} (${formatFileSize(file.size)})`);
             }
         });
@@ -136,60 +136,7 @@ function isValidXML(xmlString) {
         return false;
     }
 }
-// Initialize tooltips
-document.addEventListener('DOMContentLoaded', function() {
-    // Initialize tooltips
-    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    if (typeof bootstrap !== 'undefined') {
-        var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    }
-
-    // File upload validation
-    const fileInput = document.querySelector('input[type="file"][accept=".apk"]');
-    if (fileInput) {
-        fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                if (!file.name.toLowerCase().endsWith('.apk')) {
-                    alert('Please select a valid APK file');
-                    e.target.value = '';
-                    return;
-                }
-
-                // Show file size
-                const fileSize = formatFileSize(file.size);
-                const maxSize = 100 * 1024 * 1024; // 100MB
-
-                if (file.size > maxSize) {
-                    alert('File size exceeds 100MB limit');
-                    e.target.value = '';
-                    return;
-                }
-
-                console.log(`Selected APK: ${file.name} (${fileSize})`);
-            }
-        });
-    }
-
-    // Resource preview functionality
-    setupResourcePreview();
-
-    // GUI modification preview
-    setupGUIPreview();
-
-    // Form validation
-    setupFormValidation();
-});
-
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
+// Additional functionality
 
 function setupResourcePreview() {
     // String resource preview

@@ -95,18 +95,34 @@
                             <div class="alert alert-info">
                                 <i data-feather="info"></i>
                                 <strong>Enable AI-Powered Code Generation</strong><br>
-                                To use advanced AI features with Google Gemini, you need to set up your API key.
-                                <br><br>
-                                <small>
-                                    1. Get your free API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a><br>
-                                    2. Add it to your environment variables as <code>GEMINI_API_KEY</code><br>
-                                    3. Restart the application to enable AI features
-                                </small>
+                                Enter your Google Gemini API key to enable advanced AI features.
                             </div>
+                            
+                            <form method="POST" action="{{ url_for('save_gemini_key') }}" class="mb-3">
+                                <div class="mb-3">
+                                    <label for="gemini_api_key" class="form-label">Gemini API Key</label>
+                                    <div class="input-group">
+                                        <input type="password" class="form-control" id="gemini_api_key" name="gemini_api_key" 
+                                               placeholder="Enter your Gemini API key..." 
+                                               value="{{ '***configured***' if gemini_enabled else '' }}">
+                                        <button type="button" class="btn btn-outline-secondary" id="toggle-key-visibility">
+                                            <i data-feather="eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text">
+                                        Get your free API key from <a href="https://makersuite.google.com/app/apikey" target="_blank">Google AI Studio</a>
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-primary">
+                                    <i data-feather="save"></i>
+                                    Save API Key
+                                </button>
+                            </form>
+
                             {% if not gemini_enabled %}
                             <div class="alert alert-warning">
                                 <i data-feather="alert-triangle"></i>
-                                AI features are currently using fallback mode. Set GEMINI_API_KEY for full functionality.
+                                AI features are currently using fallback mode. Enter your API key above for full functionality.
                             </div>
                             {% else %}
                             <div class="alert alert-success">
@@ -278,12 +294,26 @@
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
     <script>
         feather.replace();
-        APKEditor.init();
 
         function showAPKToolInfo() {
             const modal = new bootstrap.Modal(document.getElementById('apktoolModal'));
             modal.show();
         }
+
+        // Toggle API key visibility
+        document.getElementById('toggle-key-visibility')?.addEventListener('click', function() {
+            const keyInput = document.getElementById('gemini_api_key');
+            const icon = this.querySelector('i');
+            
+            if (keyInput.type === 'password') {
+                keyInput.type = 'text';
+                icon.setAttribute('data-feather', 'eye-off');
+            } else {
+                keyInput.type = 'password';
+                icon.setAttribute('data-feather', 'eye');
+            }
+            feather.replace();
+        });
     </script>
 </body>
 </html>

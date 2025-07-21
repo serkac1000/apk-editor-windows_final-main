@@ -351,11 +351,11 @@ class APKEditor:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
 
             if result.returncode == 0:
-                logging.info("Debug keystore created")
-                return True
-            else:
-                logging.warning(f"Keystore creation failed: {result.stderr}")
-                return False
+                    logging.info("Debug keystore created")
+                    return True
+                else:
+                    logging.warning(f"Keystore creation failed: {result.stderr}")
+                    return False
 
         except Exception as e:
             logging.warning(f"Keystore creation error: {str(e)}")
