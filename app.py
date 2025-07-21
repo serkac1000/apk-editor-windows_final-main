@@ -7,7 +7,30 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 import uuid
 from datetime import datetime
-from apk_editor import APKEditor
+try:
+    from apk_editor import APKEditor
+except ImportError:
+    logging.error("APKEditor module not found. Creating placeholder.")
+    class APKEditor:
+        def __init__(self, *args, **kwargs):
+            pass
+        def decompile_apk(self, *args, **kwargs):
+            return False
+        def get_project_resources(self, *args, **kwargs):
+            return {}
+        def get_resource_content(self, *args, **kwargs):
+            return ""
+        def save_image_resource(self, *args, **kwargs):
+            return False
+        def save_string_resource(self, *args, **kwargs):
+            return False
+        def save_layout_resource(self, *args, **kwargs):
+            return False
+        def compile_apk(self, *args, **kwargs):
+            return False
+        def get_compiled_apk_path(self, *args, **kwargs):
+            return None
+
 from utils.file_manager import FileManager
 
 # Configure logging
@@ -865,6 +888,11 @@ def apply_gui_modifications(project_id, modifications):
 def too_large(e):
     flash('File too large. Maximum size is 100MB.', 'error')
     return redirect(url_for('index'))
+
+@app.errorhandler(400)
+def bad_request(e):
+    """Handle SSL connections to HTTP server"""
+    return "SSL connection not supported. Please use HTTP instead of HTTPS.", 400
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
