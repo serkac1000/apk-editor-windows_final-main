@@ -530,6 +530,45 @@ def test_ai():
             'message': f'AI test failed: {str(e)}'
         })
 
+@app.route('/sign_apk/<project_id>', methods=['POST'])
+def sign_apk(project_id):
+    """Sign APK file separately"""
+    try:
+        project = file_manager.get_project(project_id)
+        if not project:
+            return jsonify({'success': False, 'message': 'Project not found'}), 404
+
+        # Check if compiled APK exists
+        compiled_apk_path = apk_editor.get_compiled_apk_path(project_id)
+        if not compiled_apk_path or not os.path.exists(compiled_apk_path):
+            return jsonify({'success': False, 'message': 'No compiled APK found. Please compile first.'}), 400
+
+        # Sign the APK
+        project_dir = os.path.join(app.config['PROJECTS_FOLDER'], project_id)
+        signed_apk_path = os.path.join(project_dir, 'signed.apk')
+
+        success = apk_editor.sign_apk_advanced(compiled_apk_path, signed_apk_path)
+        
+        if success:
+            # Update project metadata
+            file_manager.update_project_metadata(project_id, {
+                'signed': True,
+                'signed_at': datetime.now().isoformat(),
+                'status': 'signed'
+            })
+            
+            return jsonify({
+                'success': True,
+                'message': 'APK signed successfully!',
+                'signed_path': signed_apk_path
+            })
+        else:
+            return jsonify({'success': False, 'message': 'Failed to sign APK'}), 500
+
+    except Exception as e:
+        logging.error(f"Sign APK error: {str(e)}")
+        return jsonify({'success': False, 'message': f'Sign failed: {str(e)}'}), 500
+
 
 
 def generate_color_template(prompt):

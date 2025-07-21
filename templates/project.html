@@ -63,6 +63,13 @@
                                         <i data-feather="shield"></i> Compile & Sign
                                     </a></li>
                                     <li><a class="dropdown-item" href="{{ url_for('compile_apk', project_id=project.id, sign_option='unsigned') }}">
+                                        <i data-feather="package"></i> Compile Only
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><button class="dropdown-item sign-apk-btn" data-project-id="{{ project.id }}">
+                                        <i data-feather="shield-check"></i> Sign Existing APK
+                                    </button></li>
+                                    <li><a class="dropdown-item" href="{{ url_for('compile_apk', project_id=project.id, sign_option='unsigned') }}">
                                         <i data-feather="package"></i> Compile Only (Unsigned)
                                     </a></li>
                                 </ul>

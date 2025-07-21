@@ -244,6 +244,10 @@ class APKEditor:
 
         return None
 
+    def sign_apk_advanced(self, input_apk, output_apk):
+        """Public method to sign APK with advanced techniques"""
+        return self._sign_apk_advanced(input_apk, output_apk)
+
     def _sign_apk_advanced(self, input_apk, output_apk):
         """Advanced APK signing with multiple methods"""
         try:

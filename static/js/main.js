@@ -1,3 +1,4 @@
+
 // APK Editor JavaScript functionality
 
 class APKEditor {
@@ -38,22 +39,34 @@ class APKEditor {
             button.addEventListener('click', this.handleCompile.bind(this));
         });
 
-        // API key form
-        const apiKeyForm = document.getElementById('api-key-form');
-        if (apiKeyForm) {
-            apiKeyForm.addEventListener('submit', this.handleApiKeySubmit.bind(this));
-        }
-
-        // Test AI button
-        const testAiBtn = document.getElementById('test-ai-btn');
-        if (testAiBtn) {
-            testAiBtn.addEventListener('click', this.testAI.bind(this));
-        }
+        // Sign APK buttons
+        const signButtons = document.querySelectorAll('.sign-apk-btn');
+        signButtons.forEach(button => {
+            button.addEventListener('click', this.handleSignApk.bind(this));
+        });
 
         // GUI modification form
         const guiForm = document.getElementById('gui-modification-form');
         if (guiForm) {
             guiForm.addEventListener('submit', this.handleGUIModification.bind(this));
+        }
+
+        // Generate function form
+        const generateForm = document.getElementById('generate-function-form');
+        if (generateForm) {
+            generateForm.addEventListener('submit', this.handleGenerateFunction.bind(this));
+        }
+
+        // API key form
+        const apiKeyForm = document.getElementById('api-key-form');
+        if (apiKeyForm) {
+            apiKeyForm.addEventListener('submit', this.handleApiKeySave.bind(this));
+        }
+
+        // Test AI button
+        const testAiBtn = document.getElementById('test-ai-btn');
+        if (testAiBtn) {
+            testAiBtn.addEventListener('click', this.handleTestAI.bind(this));
         }
     }
 
@@ -67,15 +80,13 @@ class APKEditor {
     handleFileSelect(event) {
         const file = event.target.files[0];
         if (file) {
-            const fileName = file.name;
             const fileSize = this.formatFileSize(file.size);
-            console.log(`Selected APK: ${fileName} (${fileSize})`);
-
+            console.log(`Selected APK: ${file.name} (${fileSize})`);
+            
             // Update UI to show selected file
-            const label = document.querySelector('label[for="apk_file"]');
-            if (label) {
-                label.textContent = `Selected: ${fileName}`;
-                label.classList.add('text-success');
+            const fileName = document.querySelector('.file-name');
+            if (fileName) {
+                fileName.textContent = `${file.name} (${fileSize})`;
             }
         }
     }
@@ -83,176 +94,105 @@ class APKEditor {
     handleFormSubmit(event) {
         const form = event.target;
         const submitBtn = form.querySelector('button[type="submit"]');
-
-        if (submitBtn) {
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+        
+        if (submitBtn && !submitBtn.disabled) {
+            // Add loading state
             submitBtn.disabled = true;
-
-            // Re-enable after 30 seconds as fallback
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+            
+            // Reset after form submission
             setTimeout(() => {
-                submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
-            }, 30000);
+                submitBtn.innerHTML = originalText;
+            }, 2000);
         }
     }
 
     handlePreview(event) {
         event.preventDefault();
-        const resourceType = event.target.dataset.resourceType;
-        const resourcePath = event.target.dataset.resourcePath;
+        const button = event.target.closest('.preview-resource');
+        const resourcePath = button.dataset.resourcePath;
+        const resourceType = button.dataset.resourceType;
+        const projectId = button.dataset.projectId;
+        
+        // Get current content
+        const contentTextarea = document.getElementById('content');
+        const content = contentTextarea ? contentTextarea.value : '';
+        
+        // Show preview modal or update preview area
+        this.showPreview(projectId, resourceType, resourcePath, content);
+    }
 
+    showPreview(projectId, resourceType, resourcePath, content) {
+        // Create or update preview area
+        let previewArea = document.getElementById('preview-area');
+        if (!previewArea) {
+            previewArea = document.createElement('div');
+            previewArea.id = 'preview-area';
+            previewArea.className = 'card mt-3';
+            previewArea.innerHTML = `
+                <div class="card-header">
+                    <h6 class="mb-0">Preview</h6>
+                </div>
+                <div class="card-body">
+                    <div id="preview-content"></div>
+                </div>
+            `;
+            
+            const contentContainer = document.querySelector('.container-fluid');
+            if (contentContainer) {
+                contentContainer.appendChild(previewArea);
+            }
+        }
+        
+        const previewContent = document.getElementById('preview-content');
         if (resourceType === 'string' || resourceType === 'layout') {
-            this.showTextPreview(resourceType, resourcePath);
-        } else if (resourceType === 'image') {
-            this.showImagePreview(resourcePath);
-        }
-    }
-
-    showTextPreview(resourceType, resourcePath) {
-        const content = document.getElementById('content').value;
-        const previewContainer = document.getElementById('preview-container');
-
-        if (!previewContainer) {
-            this.createPreviewContainer();
-        }
-
-        const preview = document.getElementById('preview-content');
-        if (resourceType === 'string') {
-            preview.innerHTML = this.generateStringPreview(content);
-        } else if (resourceType === 'layout') {
-            preview.innerHTML = this.generateLayoutPreview(content);
-        }
-
-        document.getElementById('preview-container').style.display = 'block';
-    }
-
-    generateStringPreview(content) {
-        const parser = new DOMParser();
-        try {
-            const doc = parser.parseFromString(content, 'text/xml');
-            const strings = doc.querySelectorAll('string');
-
-            let previewHTML = '<div class="preview-app"><div class="preview-header">App Preview</div><div class="preview-content">';
-
-            strings.forEach(string => {
-                const name = string.getAttribute('name');
-                const value = string.textContent;
-
-                if (name === 'app_name') {
-                    previewHTML += `<h5>${value}</h5>`;
-                } else if (name.includes('button') || name.includes('btn')) {
-                    previewHTML += `<button class="btn btn-primary m-1" id="preview-button">${value}</button>`;
-                } else {
-                    previewHTML += `<div class="preview-text">${value}</div>`;
-                }
-            });
-
-            previewHTML += '</div></div>';
-            return previewHTML;
-        } catch (error) {
-            return '<div class="alert alert-warning">Invalid XML format</div>';
-        }
-    }
-
-    generateLayoutPreview(content) {
-        // Basic layout preview - simplified representation
-        let previewHTML = '<div class="preview-app"><div class="preview-header">Layout Preview</div><div class="preview-content">';
-
-        if (content.includes('TextView')) {
-            previewHTML += '<div class="preview-text">Sample Text View</div>';
-        }
-        if (content.includes('Button')) {
-            previewHTML += '<button class="btn btn-primary m-1">Sample Button</button>';
-        }
-        if (content.includes('ImageView')) {
-            previewHTML += '<div class="bg-light p-3 m-1">📱 Image View</div>';
-        }
-
-        previewHTML += '</div></div>';
-        return previewHTML;
-    }
-
-    createPreviewContainer() {
-        const container = document.createElement('div');
-        container.id = 'preview-container';
-        container.className = 'preview-container mt-3';
-        container.innerHTML = `
-            <h6>Preview</h6>
-            <div id="preview-content"></div>
-        `;
-
-        const form = document.querySelector('form');
-        if (form) {
-            form.appendChild(container);
+            previewContent.innerHTML = `<pre><code>${this.escapeHtml(content)}</code></pre>`;
+        } else {
+            previewContent.innerHTML = '<p>Preview not available for this resource type.</p>';
         }
     }
 
     updatePreview() {
-        const resourceType = document.querySelector('input[name="resource_type"]')?.value;
-        const resourcePath = document.querySelector('input[name="resource_path"]')?.value;
-
-        if (resourceType && resourcePath) {
-            this.showTextPreview(resourceType, resourcePath);
+        // Update preview in real-time
+        const contentTextarea = document.getElementById('content');
+        if (contentTextarea) {
+            const content = contentTextarea.value;
+            const previewContent = document.getElementById('preview-content');
+            if (previewContent) {
+                previewContent.innerHTML = `<pre><code>${this.escapeHtml(content)}</code></pre>`;
+            }
         }
     }
 
     handleCompile(event) {
         event.preventDefault();
-        const button = event.target;
+        const button = event.target.closest('.compile-btn');
         const projectId = button.dataset.projectId;
-        const originalText = button.textContent;
-
-        // Show loading state
+        const signOption = button.dataset.signOption || 'signed';
+        
+        // Update button state
         button.disabled = true;
+        const originalText = button.innerHTML;
         button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Compiling...';
-
-        // Follow the original href after showing loading state
-        setTimeout(() => {
-            window.location.href = `/compile/${projectId}`;
-        }, 100);
+        
+        // Redirect to compile endpoint
+        window.location.href = `/compile/${projectId}/${signOption}`;
     }
 
-    showCompileProgress() {
-        const progressHtml = `
-            <div class="alert alert-info">
-                <i class="bi bi-gear-fill"></i> Compiling APK...
-                <div class="progress mt-2">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
-                         style="width: 100%"></div>
-                </div>
-            </div>
-        `;
-
-        const container = document.querySelector('.container-fluid');
-        if (container) {
-            container.insertAdjacentHTML('afterbegin', progressHtml);
-        }
-    }
-
-    handleApiKeySubmit(event) {
+    handleSignApk(event) {
         event.preventDefault();
-        const form = event.target;
-        const formData = new FormData(form);
-
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
-            submitBtn.disabled = true;
-        }
-
-        // Submit form normally
-        form.submit();
-    }
-
-    testAI() {
-        const testBtn = document.getElementById('test-ai-btn');
-        if (testBtn) {
-            testBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Testing...';
-            testBtn.disabled = true;
-        }
-
-        fetch('/test_ai', {
+        const button = event.target.closest('.sign-apk-btn');
+        const projectId = button.dataset.projectId;
+        
+        // Update button state
+        button.disabled = true;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing...';
+        
+        // Make AJAX request to sign APK
+        fetch(`/sign_apk/${projectId}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -260,26 +200,23 @@ class APKEditor {
         })
         .then(response => response.json())
         .then(data => {
-            const alertClass = data.success ? 'alert-success' : 'alert-danger';
-            const alertHtml = `
-                <div class="alert ${alertClass}" role="alert">
-                    <strong>${data.success ? 'Success!' : 'Error!'}</strong> ${data.message}
-                </div>
-            `;
-
-            const container = document.querySelector('.container-fluid');
-            if (container) {
-                container.insertAdjacentHTML('afterbegin', alertHtml);
+            if (data.success) {
+                this.showNotification('APK signed successfully!', 'success');
+                // Refresh the page or update UI
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                this.showNotification(data.message || 'Failed to sign APK', 'error');
             }
         })
         .catch(error => {
-            console.error('AI test error:', error);
+            console.error('Sign APK error:', error);
+            this.showNotification('Failed to sign APK', 'error');
         })
         .finally(() => {
-            if (testBtn) {
-                testBtn.innerHTML = '<i class="bi bi-cpu"></i> Test AI';
-                testBtn.disabled = false;
-            }
+            button.disabled = false;
+            button.innerHTML = originalText;
         });
     }
 
@@ -291,6 +228,74 @@ class APKEditor {
         }
     }
 
+    handleGenerateFunction(event) {
+        const button = event.target.querySelector('button[type="submit"]');
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Generating...';
+        }
+    }
+
+    handleApiKeySave(event) {
+        const button = event.target.querySelector('button[type="submit"]');
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Saving...';
+        }
+    }
+
+    handleTestAI(event) {
+        event.preventDefault();
+        const button = event.target;
+        
+        button.disabled = true;
+        const originalText = button.innerHTML;
+        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Testing...';
+        
+        fetch('/test_ai', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                this.showNotification('AI is working correctly!', 'success');
+            } else {
+                this.showNotification(data.message || 'AI test failed', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('AI test error:', error);
+            this.showNotification('AI test failed', 'error');
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.innerHTML = originalText;
+        });
+    }
+
+    showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+        notification.innerHTML = `
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-remove after 5 seconds
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 5000);
+    }
+
     // Utility methods
     formatFileSize(bytes) {
         if (bytes === 0) return '0 B';
@@ -298,6 +303,12 @@ class APKEditor {
         const sizes = ['B', 'KB', 'MB', 'GB'];
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
     }
 
     debounce(func, wait) {
@@ -321,17 +332,4 @@ document.addEventListener('DOMContentLoaded', function() {
     if (typeof feather !== 'undefined') {
         feather.replace();
     }
-
-    // Handle form submissions with loading states
-    const forms = document.querySelectorAll('form');
-    forms.forEach(form => {
-        form.addEventListener('submit', function() {
-            const submitButton = form.querySelector('button[type="submit"]');
-            if (submitButton) {
-                submitButton.disabled = true;
-                const originalText = submitButton.textContent;
-                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
-            }
-        });
-    });
 });
