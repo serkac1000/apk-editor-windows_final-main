@@ -1,4 +1,3 @@
-
 // APK Editor JavaScript functionality
 
 class APKEditor {
@@ -88,7 +87,7 @@ class APKEditor {
         if (file) {
             const fileSize = this.formatFileSize(file.size);
             console.log(`Selected APK: ${file.name} (${fileSize})`);
-            
+
             // Update UI to show selected file
             const fileName = document.querySelector('.file-name');
             if (fileName) {
@@ -103,13 +102,13 @@ class APKEditor {
     handleFormSubmit(event) {
         const form = event.target;
         const submitBtn = form.querySelector('button[type="submit"]');
-        
+
         if (submitBtn && !submitBtn.disabled) {
             // Add loading state
             submitBtn.disabled = true;
             const originalText = submitBtn.innerHTML;
             submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
-            
+
             // Reset after form submission
             setTimeout(() => {
                 submitBtn.disabled = false;
@@ -124,11 +123,11 @@ class APKEditor {
         const resourcePath = button.dataset.resourcePath;
         const resourceType = button.dataset.resourceType;
         const projectId = button.dataset.projectId;
-        
+
         // Get current content
         const contentTextarea = document.getElementById('content');
         const content = contentTextarea ? contentTextarea.value : '';
-        
+
         // Show preview modal or update preview area
         this.showPreview(projectId, resourceType, resourcePath, content);
     }
@@ -148,13 +147,13 @@ class APKEditor {
                     <div id="preview-content"></div>
                 </div>
             `;
-            
+
             const contentContainer = document.querySelector('.container');
             if (contentContainer) {
                 contentContainer.appendChild(previewArea);
             }
         }
-        
+
         const previewContent = document.getElementById('preview-content');
         if (resourceType === 'string' || resourceType === 'layout') {
             previewContent.innerHTML = `<pre><code>${this.escapeHtml(content)}</code></pre>`;
@@ -180,12 +179,12 @@ class APKEditor {
         const button = event.target.closest('.compile-btn');
         const projectId = button.dataset.projectId;
         const signOption = button.dataset.signOption || 'signed';
-        
+
         // Update button state
         button.disabled = true;
         const originalText = button.innerHTML;
         button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Compiling...';
-        
+
         // Redirect to compile endpoint
         window.location.href = `/compile/${projectId}/${signOption}`;
     }
@@ -194,12 +193,12 @@ class APKEditor {
         event.preventDefault();
         const button = event.target.closest('.sign-apk-btn');
         const projectId = button.dataset.projectId;
-        
+
         // Update button state
         button.disabled = true;
         const originalText = button.innerHTML;
         button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Signing...';
-        
+
         // Make AJAX request to sign APK
         fetch(`/sign_apk/${projectId}`, {
             method: 'POST',
@@ -256,11 +255,11 @@ class APKEditor {
     handleTestAI(event) {
         event.preventDefault();
         const button = event.target;
-        
+
         button.disabled = true;
         const originalText = button.innerHTML;
         button.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Testing...';
-        
+
         fetch('/test_ai', {
             method: 'POST',
             headers: {
@@ -288,7 +287,7 @@ class APKEditor {
     toggleApiKeyVisibility() {
         const keyInput = document.getElementById('gemini_api_key');
         const icon = document.querySelector('#toggle-key-visibility i');
-        
+
         if (keyInput && icon) {
             if (keyInput.type === 'password') {
                 keyInput.type = 'text';
@@ -297,7 +296,7 @@ class APKEditor {
                 keyInput.type = 'password';
                 icon.setAttribute('data-feather', 'eye');
             }
-            
+
             if (typeof feather !== 'undefined') {
                 feather.replace();
             }
@@ -313,9 +312,9 @@ class APKEditor {
             ${message}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         `;
-        
+
         document.body.appendChild(notification);
-        
+
         // Auto-remove after 5 seconds
         setTimeout(() => {
             if (notification.parentNode) {
