@@ -1,343 +1,271 @@
-// APK Editor JavaScript
+// APK Editor JavaScript functionality
+class APKEditor {
+    constructor() {
+        this.initializeEventListeners();
+        this.initializeFeatherIcons();
+    }
 
+    initializeEventListeners() {
+        // File upload handling
+        const fileInput = document.getElementById('apk_file');
+        if (fileInput) {
+            fileInput.addEventListener('change', this.handleFileSelection.bind(this));
+        }
+
+        // Form submissions with loading states
+        const forms = document.querySelectorAll('form');
+        forms.forEach(form => {
+            form.addEventListener('submit', this.handleFormSubmit.bind(this));
+        });
+
+        // Preview functionality
+        const previewButtons = document.querySelectorAll('.preview-btn');
+        previewButtons.forEach(btn => {
+            btn.addEventListener('click', this.handlePreview.bind(this));
+        });
+
+        // Compile buttons
+        const compileButtons = document.querySelectorAll('.compile-btn');
+        compileButtons.forEach(btn => {
+            btn.addEventListener('click', this.handleCompile.bind(this));
+        });
+
+        // API key form
+        const apiKeyForm = document.getElementById('api-key-form');
+        if (apiKeyForm) {
+            apiKeyForm.addEventListener('submit', this.handleApiKeySubmit.bind(this));
+        }
+
+        // Test AI button
+        const testAiBtn = document.getElementById('test-ai-btn');
+        if (testAiBtn) {
+            testAiBtn.addEventListener('click', this.testAI.bind(this));
+        }
+    }
+
+    initializeFeatherIcons() {
+        // Initialize Feather icons if available
+        if (typeof feather !== 'undefined') {
+            feather.replace();
+        }
+    }
+
+    handleFileSelection(event) {
+        const file = event.target.files[0];
+        const fileInfo = document.getElementById('file-info');
+
+        if (file && fileInfo) {
+            const fileSize = (file.size / (1024 * 1024)).toFixed(2);
+            fileInfo.innerHTML = `
+                <div class="alert alert-info">
+                    <i class="bi bi-file-earmark-zip"></i>
+                    Selected APK: ${file.name} (${fileSize} MB)
+                </div>
+            `;
+            console.log(`Selected APK: ${file.name} (${fileSize} MB)`);
+        }
+
+        const projectNameInput = document.getElementById('project_name');
+        if (projectNameInput && file) {
+            projectNameInput.value = file.name.replace('.apk', '');
+        }
+    }
+
+    handleFormSubmit(event) {
+        const form = event.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+
+        if (submitBtn) {
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Processing...';
+            submitBtn.disabled = true;
+
+            // Re-enable after 30 seconds as fallback
+            setTimeout(() => {
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }, 30000);
+        }
+    }
+
+    handlePreview(event) {
+        event.preventDefault();
+        const button = event.target;
+        const resourceType = button.dataset.resourceType;
+        const resourcePath = button.dataset.resourcePath;
+        const projectId = button.dataset.projectId;
+
+        this.showPreview(projectId, resourceType, resourcePath);
+    }
+
+    showPreview(projectId, resourceType, resourcePath) {
+        const previewContainer = document.getElementById('preview-container');
+        if (!previewContainer) return;
+
+        let previewContent = '';
+
+        if (resourceType === 'string') {
+            previewContent = this.getStringPreviewContent(resourcePath);
+        } else if (resourceType === 'layout') {
+            previewContent = this.getLayoutPreviewContent(resourcePath);
+        } else {
+            previewContent = `<p>Preview not available for this resource type.</p>`;
+        }
+
+        previewContainer.innerHTML = `
+            <div class="preview-app">
+                <div class="preview-header">App Preview</div>
+                <div class="preview-content">
+                    ${previewContent}
+                </div>
+            </div>
+        `;
+    }
+
+    getStringPreviewContent(resourcePath) {
+        return `
+            <div class="preview-text">Preview for string resource: ${resourcePath}</div>
+        `;
+    }
+
+    getLayoutPreviewContent(resourcePath) {
+        return `
+            <button id="preview-button" class="btn btn-primary">Sample Button</button>
+        `;
+    }
+
+    updateStringPreview() {
+        const previewText = document.querySelector('.preview-text');
+        if (previewText) {
+            previewText.textContent = 'Updated text content';
+        }
+    }
+
+    updateLayoutPreview() {
+        const previewButton = document.getElementById('preview-button');
+        if (previewButton) {
+            previewButton.style.backgroundColor = '#28a745';
+            previewButton.textContent = 'Modified Button';
+        }
+    }
+
+    handleCompile(event) {
+        event.preventDefault();
+        const button = event.target;
+        const projectId = button.dataset.projectId;
+
+        this.showCompileProgress();
+
+        // Redirect to compile endpoint
+        window.location.href = `/compile/${projectId}`;
+    }
+
+    showCompileProgress() {
+        const progressHtml = `
+            <div class="alert alert-info">
+                <i class="bi bi-gear-fill"></i> Compiling APK...
+                <div class="progress mt-2">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         style="width: 100%"></div>
+                </div>
+            </div>
+        `;
+
+        const container = document.querySelector('.container-fluid');
+        if (container) {
+            container.insertAdjacentHTML('afterbegin', progressHtml);
+        }
+    }
+
+    handleApiKeySubmit(event) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+
+        const submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Saving...';
+            submitBtn.disabled = true;
+        }
+
+        // Submit form normally
+        form.submit();
+    }
+
+    testAI() {
+        const testBtn = document.getElementById('test-ai-btn');
+        if (testBtn) {
+            testBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Testing...';
+            testBtn.disabled = true;
+        }
+
+        fetch('/test_ai', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            const alertClass = data.success ? 'alert-success' : 'alert-danger';
+            const alertHtml = `
+                <div class="alert ${alertClass}" role="alert">
+                    <strong>${data.success ? 'Success!' : 'Error!'}</strong> ${data.message}
+                </div>
+            `;
+
+            const container = document.querySelector('.container-fluid');
+            if (container) {
+                container.insertAdjacentHTML('afterbegin', alertHtml);
+            }
+        })
+        .catch(error => {
+            console.error('AI test error:', error);
+        })
+        .finally(() => {
+            if (testBtn) {
+                testBtn.innerHTML = '<i class="bi bi-cpu"></i> Test AI';
+                testBtn.disabled = false;
+            }
+        });
+    }
+
+    // Utility methods
+    formatFileSize(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    showNotification(message, type = 'info') {
+        const alertClass = `alert-${type}`;
+        const alertHtml = `
+            <div class="alert ${alertClass} alert-dismissible fade show" role="alert">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+
+        const container = document.querySelector('.container-fluid');
+        if (container) {
+            container.insertAdjacentHTML('afterbegin', alertHtml);
+        }
+    }
+
+    isValidXML(xmlString) {
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(xmlString, 'text/xml');
+            return !doc.querySelector('parsererror');
+        } catch (e) {
+            return false;
+        }
+    }
+}
+
+// Initialize APK Editor when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize feather icons
-    if (typeof feather !== 'undefined') {
-        feather.replace();
-    }
-
-    // File upload handling
-    const fileInput = document.getElementById('apk_file');
-    const fileName = document.getElementById('file-name');
-    const fileSize = document.getElementById('file-size');
-
-    if (fileInput) {
-        fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                if (fileName) fileName.textContent = file.name;
-                if (fileSize) fileSize.textContent = formatFileSize(file.size);
-                console.log(`Selected APK: ${file.name} (${formatFileSize(file.size)})`);
-            }
-        });
-    }
-
-    // Project name auto-fill
-    const projectNameInput = document.getElementById('project_name');
-    if (fileInput && projectNameInput) {
-        fileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file && !projectNameInput.value) {
-                projectNameInput.value = file.name.replace('.apk', '');
-            }
-        });
-    }
-
-    // Preview functionality
-    setupPreview();
-
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    if (typeof bootstrap !== 'undefined') {
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
-    }
+    window.apkEditor = new APKEditor();
 });
-
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-function setupPreview() {
-    const contentTextarea = document.getElementById('content');
-    const previewBtn = document.getElementById('preview-btn');
-    const previewContainer = document.getElementById('preview-container');
-
-    if (contentTextarea && previewBtn && previewContainer) {
-        previewBtn.addEventListener('click', function() {
-            const content = contentTextarea.value;
-            const resourceType = document.querySelector('[data-resource-type]')?.dataset.resourceType;
-            const resourcePath = document.querySelector('[data-resource-path]')?.dataset.resourcePath;
-            const projectId = document.querySelector('[data-project-id]')?.dataset.projectId;
-
-            if (resourceType && resourcePath && projectId) {
-                showPreview(projectId, resourceType, resourcePath, content);
-            }
-        });
-
-        // Real-time preview on content change
-        contentTextarea.addEventListener('input', function() {
-            const content = this.value;
-            const resourceType = document.querySelector('[data-resource-type]')?.dataset.resourceType;
-            const resourcePath = document.querySelector('[data-resource-path]')?.dataset.resourcePath;
-            const projectId = document.querySelector('[data-project-id]')?.dataset.projectId;
-
-            if (resourceType && resourcePath && projectId) {
-                showPreview(projectId, resourceType, resourcePath, content);
-            }
-        });
-    }
-}
-
-function showPreview(projectId, resourceType, resourcePath, content) {
-    const previewContainer = document.getElementById('preview-container');
-
-    if (!previewContainer) return;
-
-    if (resourceType === 'string') {
-        previewContainer.innerHTML = `
-            <div class="card mt-3">
-                <div class="card-header">
-                    <h5 class="mb-0">Preview: ${resourcePath}</h5>
-                </div>
-                <div class="card-body">
-                    <pre class="bg-light p-3 rounded border">${escapeHtml(content)}</pre>
-                </div>
-            </div>
-        `;
-    } else if (resourceType === 'layout') {
-        const isValid = isValidXML(content);
-        previewContainer.innerHTML = `
-            <div class="card mt-3">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0">XML Layout Preview: ${resourcePath}</h5>
-                    <span class="badge ${isValid ? 'bg-success' : 'bg-danger'}">
-                        ${isValid ? '✅ Valid XML' : '❌ Invalid XML'}
-                    </span>
-                </div>
-                <div class="card-body">
-                    <pre class="bg-light p-3 rounded border" style="max-height: 400px; overflow-y: auto;"><code class="language-xml">${escapeHtml(content)}</code></pre>
-                    ${!isValid ? '<div class="alert alert-warning mt-2"><small>XML syntax errors detected. Please check your formatting.</small></div>' : ''}
-                </div>
-            </div>
-        `;
-    }
-
-    previewContainer.style.display = 'block';
-}
-
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-function isValidXML(xmlString) {
-    try {
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(xmlString, 'text/xml');
-        return !doc.querySelector('parsererror');
-    } catch (e) {
-        return false;
-    }
-}
-// Additional functionality
-
-function setupResourcePreview() {
-    // String resource preview
-    const stringTextarea = document.querySelector('textarea[name="content"]');
-    if (stringTextarea) {
-        const previewDiv = document.createElement('div');
-        previewDiv.className = 'mt-3 p-3 border rounded';
-        previewDiv.innerHTML = '<h6>Preview:</h6><div id="string-preview"></div>';
-        stringTextarea.parentNode.appendChild(previewDiv);
-
-        stringTextarea.addEventListener('input', function() {
-            const preview = document.getElementById('string-preview');
-            preview.textContent = this.value || 'Empty string';
-        });
-
-        // Initial preview
-        const preview = document.getElementById('string-preview');
-        if (preview) {
-            preview.textContent = stringTextarea.value || 'Empty string';
-        }
-    }
-
-    // Image resource preview
-    const imageInput = document.querySelector('input[name="image_file"]');
-    if (imageInput) {
-        const previewDiv = document.createElement('div');
-        previewDiv.className = 'mt-3';
-        previewDiv.innerHTML = '<h6>Preview:</h6><img id="image-preview" class="img-thumbnail" style="max-width: 200px; display: none;">';
-        imageInput.parentNode.appendChild(previewDiv);
-
-        imageInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            const preview = document.getElementById('image-preview');
-
-            if (file && file.type.startsWith('image/')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    preview.src = e.target.result;
-                    preview.style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.style.display = 'none';
-            }
-        });
-    }
-}
-
-function setupGUIPreview() {
-    const guiForm = document.querySelector('form[action*="modify_gui"]');
-    if (!guiForm) return;
-
-    const changesTextarea = guiForm.querySelector('textarea[name="gui_changes"]');
-    const colorSelect = guiForm.querySelector('select[name="color_scheme"]');
-
-    if (changesTextarea || colorSelect) {
-        const previewDiv = document.createElement('div');
-        previewDiv.className = 'mt-3 p-3 border rounded bg-light';
-        previewDiv.innerHTML = `
-            <h6>Live Preview:</h6>
-            <div id="gui-preview">
-                <div class="preview-app" style="border: 2px solid #ccc; padding: 20px; border-radius: 8px; background: white; max-width: 300px;">
-                    <div class="preview-header" style="background: #007bff; color: white; padding: 10px; margin: -20px -20px 20px -20px; border-radius: 6px 6px 0 0;">
-                        <h6 class="m-0">Sample App</h6>
-                    </div>
-                    <div class="preview-content">
-                        <button class="btn btn-primary mb-2" id="preview-button">Sample Button</button>
-                        <div class="preview-text">Hello World!</div>
-                        <div class="preview-status mt-2">
-                            <span class="badge bg-success">Connected</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        if (changesTextarea) {
-            changesTextarea.parentNode.appendChild(previewDiv);
-        } else if (colorSelect) {
-            colorSelect.parentNode.appendChild(previewDiv);
-        }
-
-        // Update preview on changes
-        if (changesTextarea) {
-            changesTextarea.addEventListener('input', updateGUIPreview);
-        }
-        if (colorSelect) {
-            colorSelect.addEventListener('change', updateGUIPreview);
-        }
-
-        // Initial preview
-        updateGUIPreview();
-    }
-}
-
-function updateGUIPreview() {
-    const changesTextarea = document.querySelector('textarea[name="gui_changes"]');
-    const colorSelect = document.querySelector('select[name="color_scheme"]');
-    const preview = document.querySelector('#gui-preview .preview-app');
-
-    if (!preview) return;
-
-    const changes = changesTextarea ? changesTextarea.value.toLowerCase() : '';
-    const colorScheme = colorSelect ? colorSelect.value : '';
-
-    // Reset styles
-    const header = preview.querySelector('.preview-header');
-    const button = preview.querySelector('#preview-button');
-    const status = preview.querySelector('.preview-status .badge');
-
-    // Apply color scheme
-    const colorSchemes = {
-        'blue': { primary: '#007bff', secondary: '#6c757d', accent: '#17a2b8' },
-        'green': { primary: '#28a745', secondary: '#6c757d', accent: '#20c997' },
-        'red': { primary: '#dc3545', secondary: '#6c757d', accent: '#fd7e14' },
-        'purple': { primary: '#6f42c1', secondary: '#6c757d', accent: '#e83e8c' },
-        'orange': { primary: '#fd7e14', secondary: '#6c757d', accent: '#ffc107' },
-        'dark': { primary: '#343a40', secondary: '#6c757d', accent: '#ffffff' },
-        'light': { primary: '#f8f9fa', secondary: '#e9ecef', accent: '#343a40' }
-    };
-
-    if (colorScheme && colorSchemes[colorScheme]) {
-        const colors = colorSchemes[colorScheme];
-        header.style.background = colors.primary;
-        button.style.backgroundColor = colors.primary;
-        button.style.borderColor = colors.primary;
-    }
-
-    // Apply text-based changes
-    if (changes.includes('blue')) {
-        header.style.background = '#007bff';
-        button.style.backgroundColor = '#007bff';
-        button.style.borderColor = '#007bff';
-    } else if (changes.includes('green')) {
-        header.style.background = '#28a745';
-        button.style.backgroundColor = '#28a745';
-        button.style.borderColor = '#28a745';
-    } else if (changes.includes('red')) {
-        header.style.background = '#dc3545';
-        button.style.backgroundColor = '#dc3545';
-        button.style.borderColor = '#dc3545';
-    }
-
-    // Handle button size changes
-    if (changes.includes('bigger') || changes.includes('larger')) {
-        button.style.fontSize = '18px';
-        button.style.padding = '12px 24px';
-    } else if (changes.includes('smaller')) {
-        button.style.fontSize = '12px';
-        button.style.padding = '6px 12px';
-    }
-
-    // Handle connection status changes
-    if (changes.includes('disconnected')) {
-        status.textContent = 'Disconnected';
-        status.className = 'badge bg-danger';
-    } else if (changes.includes('connected')) {
-        status.textContent = 'Connected';
-        status.className = 'badge bg-success';
-    }
-}
-
-function setupFormValidation() {
-    const forms = document.querySelectorAll('form');
-    forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            const submitButton = form.querySelector('button[type="submit"]');
-            if (submitButton) {
-                submitButton.disabled = true;
-                submitButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
-
-                // Re-enable after 10 seconds as fallback
-                setTimeout(() => {
-                    submitButton.disabled = false;
-                    submitButton.innerHTML = submitButton.getAttribute('data-original-text') || 'Submit';
-                }, 10000);
-            }
-        });
-    });
-}
-
-// Global functions
-window.confirmDelete = function(projectName) {
-    return confirm(`Are you sure you want to delete project "${projectName}"? This action cannot be undone.`);
-};
-
-window.showLoading = function(message) {
-    const overlay = document.createElement('div');
-    overlay.className = 'loading-overlay';
-    overlay.innerHTML = `
-        <div class="loading-content">
-            <div class="spinner-border text-primary mb-3"></div>
-            <div>${message || 'Processing...'}</div>
-        </div>
-    `;
-    document.body.appendChild(overlay);
-};
-
-window.hideLoading = function() {
-    const overlay = document.querySelector('.loading-overlay');
-    if (overlay) {
-        overlay.remove();
-    }
-};
