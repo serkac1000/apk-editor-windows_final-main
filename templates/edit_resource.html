@@ -81,14 +81,29 @@
                                 <div class="row">
                                     <div class="col-md-6">
                                         <div class="mb-3">
-                                            <label for="image_file" class="form-label">Replace Image</label>
+                                            <label for="edit_prompt" class="form-label">
+                                                <i data-feather="edit-2"></i>
+                                                Image Edit Description
+                                            </label>
+                                            <textarea class="form-control" id="edit_prompt" name="edit_prompt" rows="3" 
+                                                placeholder="Describe changes needed: resize to 256x256, change colors to blue theme, add glow effect, make transparent background..."></textarea>
+                                            <div class="form-text">Describe what changes you want to make to this image</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="image_file" class="form-label">Upload Replacement Image</label>
                                             <input type="file" class="form-control" id="image_file" name="image_file" accept="image/*">
                                             <div class="form-text">Upload a new image to replace the current one</div>
                                         </div>
-                                        <button type="submit" class="btn btn-primary">
-                                            <i data-feather="save"></i>
-                                            Save Changes
-                                        </button>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-primary">
+                                                <i data-feather="save"></i>
+                                                Save Changes
+                                            </button>
+                                            <button type="button" class="btn btn-secondary" onclick="generateImageFromPrompt()">
+                                                <i data-feather="zap"></i>
+                                                Generate with AI
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         {% if resource_content and resource_content.exists %}
@@ -224,6 +239,29 @@
                 pad += indent;
                 return padding + line;
             }).join('\n');
+        }
+
+        // Generate image from AI prompt
+        function generateImageFromPrompt() {
+            const prompt = document.getElementById('edit_prompt').value;
+            if (!prompt.trim()) {
+                alert('Please enter a description of the image changes you want.');
+                return;
+            }
+
+            // Show loading state
+            const button = event.target;
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i data-feather="loader"></i> Generating...';
+            button.disabled = true;
+
+            // Simulate AI image generation (placeholder)
+            setTimeout(() => {
+                alert('AI image generation feature is coming soon! For now, please upload a replacement image manually.');
+                button.innerHTML = originalText;
+                button.disabled = false;
+                feather.replace();
+            }, 2000);
         }
     </script>
 </body>
