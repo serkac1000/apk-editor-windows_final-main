@@ -1,5 +1,45 @@
 // APK Editor JavaScript functionality
 
+// Test APK tools functionality
+function testAPKTools() {
+    const btn = event.target;
+    const originalText = btn.innerHTML;
+    
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Testing APK Tools...';
+    btn.disabled = true;
+    
+    fetch('/test_apk_tools', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        let message = `APK Tools Test Results:\n\n`;
+        message += `APKTool: ${data.apktool_status}\n`;
+        message += `Java: ${data.java_status}\n\n`;
+        message += `Test Results:\n`;
+        data.test_results.forEach(result => {
+            message += `${result}\n`;
+        });
+        
+        if (data.success) {
+            alert(`✅ ${message}\n\n${data.message}`);
+        } else {
+            alert(`❌ ${message}\n\n${data.message}`);
+        }
+    })
+    .catch(error => {
+        alert('❌ Test failed: Network error');
+        console.error('APK tools test error:', error);
+    })
+    .finally(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+    });
+}
+
 class APKEditor {
     constructor() {
         this.init();
@@ -298,9 +338,8 @@ class APKEditor {
         document.body.removeChild(textArea);
     }
 }
-}
 
-// Initialize when DOM is loaded
+// Initialize APK Editor when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     window.APKEditor = new APKEditor();
 });

@@ -18,14 +18,15 @@ class APKTool:
         """Find apktool executable"""
         common_paths = [
             'apktool',
-            'apktool.jar',
             '/usr/local/bin/apktool',
             '/usr/bin/apktool',
+            '/usr/local/bin/apktool.jar',
             './tools/apktool.jar'
         ]
         
         for path in common_paths:
             if shutil.which(path) or os.path.exists(path):
+                logging.info(f"Found APKTool at: {path}")
                 return path
         
         logging.warning("APKTool not found. Please install apktool for full functionality.")
@@ -33,10 +34,23 @@ class APKTool:
     
     def _find_java(self):
         """Find Java executable"""
-        java_cmd = shutil.which('java')
-        if not java_cmd:
-            logging.warning("Java not found. Please install Java for APK operations.")
-        return java_cmd
+        java_paths = ['java', '/usr/bin/java', '/usr/local/bin/java']
+        
+        for java_path in java_paths:
+            java_cmd = shutil.which(java_path) if not os.path.exists(java_path) else java_path
+            if java_cmd and os.path.exists(java_cmd):
+                try:
+                    # Test Java version
+                    result = subprocess.run([java_cmd, '-version'], capture_output=True, text=True, timeout=10)
+                    if result.returncode == 0:
+                        logging.info(f"Found Java at: {java_cmd}")
+                        return java_cmd
+                except Exception as e:
+                    logging.warning(f"Java test failed for {java_cmd}: {str(e)}")
+                    continue
+        
+        logging.warning("Java not found. Please install Java for APK operations.")
+        return None
     
     def decompile(self, apk_path, output_dir):
         """Decompile APK file"""

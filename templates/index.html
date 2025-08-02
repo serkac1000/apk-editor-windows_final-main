@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="dark">
 <head>
@@ -52,7 +51,7 @@
                             <strong>Enable AI-Powered Code Generation & APK Editing</strong><br>
                             Enter your Google Gemini API key to enable advanced AI features for automatic code generation and intelligent APK modifications.
                         </div>
-                        
+
                         <form method="POST" action="{{ url_for('save_gemini_key') }}" id="api-key-form" class="mb-3">
                             <div class="mb-3">
                                 <label for="gemini_api_key" class="form-label">
@@ -295,6 +294,40 @@
                 </div>
             </div>
         </div>
+
+        <!-- APK Tools Test Section -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="card-title mb-0">
+                    <i data-feather="settings"></i>
+                    Testing and Debugging
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <button type="button" class="btn btn-info btn-lg w-100" onclick="testAI()">
+                            <i data-feather="zap"></i> Test AI Features
+                        </button>
+                    </div>
+                </div>
+
+                <!-- APK Tools Test Section -->
+                <div class="row mt-3">
+                    <div class="col-12">
+                        <h5>🔧 APK Processing Test</h5>
+                        <p class="text-muted">Test the complete APK decompilation, editing, compilation, and signing workflow</p>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-12">
+                        <button type="button" class="btn btn-warning btn-lg w-100" onclick="testAPKTools()">
+                            <i data-feather="settings"></i> Test APK Tools & Workflow
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- APKTool Info Modal -->
@@ -310,10 +343,10 @@
                         <div class="col-md-6">
                             <h6><i data-feather="upload"></i> 1. Upload & Decompile</h6>
                             <p class="small">Your APK is decompiled into readable resources including images, layouts, and strings.</p>
-                            
+
                             <h6><i data-feather="edit"></i> 2. Edit Resources</h6>
                             <p class="small">Modify app resources like images, text, colors, and layouts using our intuitive interface.</p>
-                            
+
                             <h6><i data-feather="package"></i> 3. Compile & Sign</h6>
                             <p class="small">Your changes are compiled back into a working APK and automatically signed for installation.</p>
                         </div>
@@ -325,7 +358,7 @@
                                 <li>Smart resource optimization</li>
                                 <li>Context-aware suggestions</li>
                             </ul>
-                            
+
                             <h6><i data-feather="shield"></i> Security</h6>
                             <p class="small">All processing happens in this secure environment. No data is sent to external servers except for AI features (when enabled).</p>
                         </div>

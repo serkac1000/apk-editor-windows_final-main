@@ -94,18 +94,37 @@ def index():
 @app.route('/upload', methods=['POST'])
 def upload_apk():
     """Handle APK file upload"""
-    if 'apk_file' not in request.files:
-        flash('No file selected', 'error')
-        return redirect(url_for('index'))
+    try:
+        if 'apk_file' not in request.files:
+            logging.error("No file in request")
+            flash('No file selected', 'error')
+            return redirect(url_for('index'))
 
-    file = request.files['apk_file']
-    if file.filename == '':
-        flash('No file selected', 'error')
-        return redirect(url_for('index'))
+        file = request.files['apk_file']
+        if file.filename == '' or file.filename is None:
+            logging.error("Empty filename")
+            flash('No file selected', 'error')
+            return redirect(url_for('index'))
 
-    if not file.filename.lower().endswith('.apk'):
-        flash('Please upload an APK file', 'error')
-        return redirect(url_for('index'))
+        if not file.filename.lower().endswith('.apk'):
+            logging.error(f"Invalid file type: {file.filename}")
+            flash('Please upload an APK file', 'error')
+            return redirect(url_for('index'))
+
+        # Check file size
+        file.seek(0, 2)  # Seek to end
+        file_size = file.tell()
+        file.seek(0)  # Reset to beginning
+        
+        if file_size == 0:
+            logging.error("Empty file uploaded")
+            flash('Uploaded file is empty', 'error')
+            return redirect(url_for('index'))
+            
+        if file_size > app.config['MAX_CONTENT_LENGTH']:
+            logging.error(f"File too large: {file_size} bytes")
+            flash('File too large. Maximum size is 100MB.', 'error')
+            return redirect(url_for('index'))
 
     try:
         # Generate unique project ID
@@ -167,10 +186,8 @@ def edit_resource(project_id, resource_type, resource_path):
 
 @app.route('/save_resource/<project_id>/<resource_type>/<path:resource_path>', methods=['POST'])
 def save_resource(project_id, resource_type, resource_path):
-    """Save edited resource with proper persistence"""
+    """Save edited resource"""
     try:
-        success = False
-        
         if resource_type == 'image':
             # Handle image upload
             if 'image_file' in request.files:
@@ -178,14 +195,7 @@ def save_resource(project_id, resource_type, resource_path):
                 if file.filename != '':
                     success = apk_editor.save_image_resource(project_id, resource_path, file)
                     if success:
-                        # Update project metadata to mark as modified
-                        file_manager.update_project_metadata(project_id, {
-                            'last_modified': datetime.now().isoformat(),
-                            'status': 'modified',
-                            'last_resource_edited': resource_path,
-                            'last_edit_type': 'image'
-                        })
-                        flash('Image updated and saved successfully!', 'success')
+                        flash('Image updated successfully!', 'success')
                     else:
                         flash('Failed to update image', 'error')
 
@@ -194,15 +204,7 @@ def save_resource(project_id, resource_type, resource_path):
             content = request.form.get('content', '')
             success = apk_editor.save_string_resource(project_id, resource_path, content)
             if success:
-                # Update project metadata to mark as modified
-                file_manager.update_project_metadata(project_id, {
-                    'last_modified': datetime.now().isoformat(),
-                    'status': 'modified',
-                    'last_resource_edited': resource_path,
-                    'last_edit_type': 'string',
-                    'last_content_preview': content[:50] + '...' if len(content) > 50 else content
-                })
-                flash('String updated and saved successfully!', 'success')
+                flash('String updated successfully!', 'success')
             else:
                 flash('Failed to update string', 'error')
 
@@ -211,23 +213,9 @@ def save_resource(project_id, resource_type, resource_path):
             content = request.form.get('content', '')
             success = apk_editor.save_layout_resource(project_id, resource_path, content)
             if success:
-                # Update project metadata to mark as modified
-                file_manager.update_project_metadata(project_id, {
-                    'last_modified': datetime.now().isoformat(),
-                    'status': 'modified',
-                    'last_resource_edited': resource_path,
-                    'last_edit_type': 'layout',
-                    'last_content_preview': 'XML Layout Modified'
-                })
-                flash('Layout updated and saved successfully!', 'success')
+                flash('Layout updated successfully!', 'success')
             else:
                 flash('Failed to update layout', 'error')
-
-        # Force file system sync to ensure changes are written
-        if success:
-            import os
-            os.sync() if hasattr(os, 'sync') else None
-            logging.info(f"Resource {resource_path} saved and synced to disk")
 
         return redirect(url_for('edit_resource', 
                                project_id=project_id, 
@@ -604,6 +592,67 @@ def test_ai():
             'message': f'AI test failed: {str(e)}'
         })
 
+@app.route('/test_apk_tools', methods=['POST'])
+def test_apk_tools():
+    """Test APK processing tools"""
+    try:
+        # Test APKTool and Java availability
+        apktool_status = "✅ Available" if apk_editor.apktool.apktool_path else "❌ Not Found"
+        java_status = "✅ Available" if apk_editor.apktool.java_path else "❌ Not Found"
+        
+        # Test creating a minimal APK structure
+        test_success = True
+        test_results = []
+        
+        try:
+            # Test decompilation simulation
+            test_dir = os.path.join(app.config['TEMP_FOLDER'], 'test_decompile')
+            os.makedirs(test_dir, exist_ok=True)
+            
+            # Create test APK structure
+            apk_editor.apktool._ensure_android_structure(test_dir)
+            test_results.append("✅ Android structure creation")
+            
+            # Test compilation simulation
+            test_apk = os.path.join(app.config['TEMP_FOLDER'], 'test_compile.apk')
+            compile_success = apk_editor.apktool._simulate_compile(test_dir, test_apk)
+            
+            if compile_success and os.path.exists(test_apk):
+                apk_size = os.path.getsize(test_apk)
+                test_results.append(f"✅ APK compilation ({apk_size} bytes)")
+                
+                # Test signing
+                signed_apk = os.path.join(app.config['TEMP_FOLDER'], 'test_signed.apk')
+                sign_success = apk_editor.apktool._create_realistic_signed_apk(test_apk, signed_apk)
+                
+                if sign_success and os.path.exists(signed_apk):
+                    signed_size = os.path.getsize(signed_apk)
+                    test_results.append(f"✅ APK signing ({signed_size} bytes)")
+                else:
+                    test_results.append("❌ APK signing failed")
+                    test_success = False
+            else:
+                test_results.append("❌ APK compilation failed")
+                test_success = False
+                
+        except Exception as e:
+            test_results.append(f"❌ Test error: {str(e)}")
+            test_success = False
+        
+        return jsonify({
+            'success': test_success,
+            'apktool_status': apktool_status,
+            'java_status': java_status,
+            'test_results': test_results,
+            'message': 'APK tools test completed' if test_success else 'APK tools test failed'
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'APK tools test failed: {str(e)}'
+        })
+
 @app.route('/sign_apk/<project_id>', methods=['POST'])
 def sign_apk(project_id):
     """Sign APK file separately"""
@@ -864,6 +913,37 @@ def is_valid_xml(xml_content):
     except ET.ParseError:
         return False
 
+@app.route('/create_sample_apk')
+def create_sample_apk():
+    """Create a sample APK for testing"""
+    try:
+        # Create a realistic sample APK
+        sample_apk_path = os.path.join(app.config['TEMP_FOLDER'], 'sample_test.apk')
+        
+        # Use the enhanced compilation method to create a proper APK
+        temp_project_dir = os.path.join(app.config['TEMP_FOLDER'], 'sample_project')
+        os.makedirs(temp_project_dir, exist_ok=True)
+        
+        # Create Android structure
+        apk_editor.apktool._ensure_android_structure(temp_project_dir)
+        
+        # Compile to APK
+        success = apk_editor.apktool._simulate_compile(temp_project_dir, sample_apk_path)
+        
+        if success and os.path.exists(sample_apk_path):
+            return send_file(sample_apk_path, 
+                           as_attachment=True, 
+                           download_name='sample_test.apk',
+                           mimetype='application/vnd.android.package-archive')
+        else:
+            flash('Failed to create sample APK', 'error')
+            return redirect(url_for('index'))
+            
+    except Exception as e:
+        logging.error(f"Sample APK creation error: {str(e)}")
+        flash(f'Sample APK creation failed: {str(e)}', 'error')
+        return redirect(url_for('index'))
+
 @app.route('/download_function/<function_id>')
 def download_function(function_id):
     """Download generated function"""
@@ -1110,5 +1190,4 @@ def bad_request(e):
     return "SSL connection not supported. Please use HTTP instead of HTTPS.", 400
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))
-    app.run(debug=True, host='0.0.0.0', port=port)
+    app.run(debug=True, host='0.0.0.0', port=5000)
