@@ -7,13 +7,15 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 import uuid
 from datetime import datetime
+
+# Import modules with error handling
 try:
     from apk_editor import APKEditor
-except ImportError:
-    logging.error("APKEditor module not found. Creating placeholder.")
+except ImportError as e:
+    logging.warning(f"APKEditor module not found: {e}. Creating placeholder.")
     class APKEditor:
         def __init__(self, *args, **kwargs):
-            pass
+            logging.info("Using placeholder APKEditor - install dependencies for full functionality")
         def decompile_apk(self, *args, **kwargs):
             return False
         def get_project_resources(self, *args, **kwargs):
@@ -30,8 +32,24 @@ except ImportError:
             return False
         def get_compiled_apk_path(self, *args, **kwargs):
             return None
+        def sign_apk_advanced(self, *args, **kwargs):
+            return False
 
-from utils.file_manager import FileManager
+try:
+    from utils.file_manager import FileManager
+except ImportError as e:
+    logging.warning(f"FileManager module not found: {e}. Creating placeholder.")
+    class FileManager:
+        def __init__(self, *args, **kwargs):
+            pass
+        def list_projects(self):
+            return []
+        def get_project(self, project_id):
+            return None
+        def delete_project(self, project_id):
+            return False
+        def update_project_metadata(self, project_id, metadata):
+            return False
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -51,9 +69,16 @@ app.config['TEMP_FOLDER'] = 'temp'
 for folder in [app.config['UPLOAD_FOLDER'], app.config['PROJECTS_FOLDER'], app.config['TEMP_FOLDER']]:
     os.makedirs(folder, exist_ok=True)
 
-# Initialize services
-file_manager = FileManager(app.config['PROJECTS_FOLDER'])
-apk_editor = APKEditor(app.config['PROJECTS_FOLDER'], app.config['TEMP_FOLDER'])
+# Initialize services with error handling
+try:
+    file_manager = FileManager(app.config['PROJECTS_FOLDER'])
+    apk_editor = APKEditor(app.config['PROJECTS_FOLDER'], app.config['TEMP_FOLDER'])
+    logging.info("Services initialized successfully")
+except Exception as e:
+    logging.error(f"Error initializing services: {e}")
+    # Create minimal fallback services
+    file_manager = FileManager(app.config['PROJECTS_FOLDER'])
+    apk_editor = APKEditor(app.config['PROJECTS_FOLDER'], app.config['TEMP_FOLDER'])
 
 @app.route('/')
 def index():

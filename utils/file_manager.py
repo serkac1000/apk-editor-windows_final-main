@@ -1,6 +1,5 @@
 import os
 import json
-import shutil
 import logging
 from datetime import datetime
 
@@ -8,95 +7,101 @@ class FileManager:
     def __init__(self, projects_folder):
         self.projects_folder = projects_folder
         os.makedirs(projects_folder, exist_ok=True)
-    
+
     def list_projects(self):
         """List all projects"""
         projects = []
-        
         try:
-            for project_id in os.listdir(self.projects_folder):
-                project_path = os.path.join(self.projects_folder, project_id)
+            if not os.path.exists(self.projects_folder):
+                return projects
+
+            for project_dir in os.listdir(self.projects_folder):
+                project_path = os.path.join(self.projects_folder, project_dir)
                 if os.path.isdir(project_path):
-                    metadata_path = os.path.join(project_path, 'metadata.json')
-                    if os.path.exists(metadata_path):
-                        with open(metadata_path, 'r') as f:
-                            metadata = json.load(f)
-                        
-                        # Add calculated fields
-                        metadata['size'] = self._get_directory_size(project_path)
-                        metadata['has_compiled'] = os.path.exists(os.path.join(project_path, 'compiled.apk'))
-                        metadata['has_signed'] = os.path.exists(os.path.join(project_path, 'signed.apk'))
-                        
-                        projects.append(metadata)
-            
-            # Sort by creation date (newest first)
-            projects.sort(key=lambda x: x.get('created_at', ''), reverse=True)
-            
+                    metadata_file = os.path.join(project_path, 'metadata.json')
+                    if os.path.exists(metadata_file):
+                        try:
+                            with open(metadata_file, 'r') as f:
+                                metadata = json.load(f)
+                                metadata['id'] = project_dir
+                                projects.append(metadata)
+                        except Exception as e:
+                            logging.error(f"Error reading project metadata: {e}")
+                            # Create basic metadata
+                            projects.append({
+                                'id': project_dir,
+                                'name': project_dir,
+                                'created_at': datetime.now().isoformat(),
+                                'status': 'unknown'
+                            })
         except Exception as e:
-            logging.error(f"Error listing projects: {str(e)}")
-        
+            logging.error(f"Error listing projects: {e}")
+
         return projects
-    
+
     def get_project(self, project_id):
-        """Get project metadata"""
+        """Get project by ID"""
         try:
             project_path = os.path.join(self.projects_folder, project_id)
-            metadata_path = os.path.join(project_path, 'metadata.json')
-            
-            if os.path.exists(metadata_path):
-                with open(metadata_path, 'r') as f:
+            metadata_file = os.path.join(project_path, 'metadata.json')
+
+            if os.path.exists(metadata_file):
+                with open(metadata_file, 'r') as f:
                     metadata = json.load(f)
-                
-                # Add calculated fields
-                metadata['size'] = self._get_directory_size(project_path)
-                metadata['has_compiled'] = os.path.exists(os.path.join(project_path, 'compiled.apk'))
-                metadata['has_signed'] = os.path.exists(os.path.join(project_path, 'signed.apk'))
-                
+                    metadata['id'] = project_id
+                    return metadata
+            elif os.path.exists(project_path):
+                # Create basic metadata if missing
+                metadata = {
+                    'id': project_id,
+                    'name': project_id,
+                    'created_at': datetime.now().isoformat(),
+                    'status': 'unknown'
+                }
                 return metadata
-            
         except Exception as e:
-            logging.error(f"Error getting project: {str(e)}")
-        
+            logging.error(f"Error getting project {project_id}: {e}")
+
         return None
-    
+
     def delete_project(self, project_id):
-        """Delete a project"""
+        """Delete project"""
         try:
             project_path = os.path.join(self.projects_folder, project_id)
             if os.path.exists(project_path):
+                import shutil
                 shutil.rmtree(project_path)
-                logging.info(f"Project deleted: {project_id}")
                 return True
-            
         except Exception as e:
-            logging.error(f"Error deleting project: {str(e)}")
-        
+            logging.error(f"Error deleting project {project_id}: {e}")
+
         return False
-    
-    def update_project_metadata(self, project_id, updates):
+
+    def update_project_metadata(self, project_id, metadata_updates):
         """Update project metadata"""
         try:
             project_path = os.path.join(self.projects_folder, project_id)
-            metadata_path = os.path.join(project_path, 'metadata.json')
-            
-            if os.path.exists(metadata_path):
-                with open(metadata_path, 'r') as f:
+            metadata_file = os.path.join(project_path, 'metadata.json')
+
+            # Load existing metadata or create new
+            metadata = {}
+            if os.path.exists(metadata_file):
+                with open(metadata_file, 'r') as f:
                     metadata = json.load(f)
-                
-                # Update fields
-                metadata.update(updates)
-                metadata['updated_at'] = datetime.now().isoformat()
-                
-                # Save updated metadata
-                with open(metadata_path, 'w') as f:
-                    json.dump(metadata, f, indent=2)
-                
-                logging.info(f"Project metadata updated: {project_id}")
-                return True
-            
+
+            # Update metadata
+            metadata.update(metadata_updates)
+            metadata['updated_at'] = datetime.now().isoformat()
+
+            # Save metadata
+            os.makedirs(project_path, exist_ok=True)
+            with open(metadata_file, 'w') as f:
+                json.dump(metadata, f, indent=2)
+
+            return True
         except Exception as e:
-            logging.error(f"Error updating project metadata: {str(e)}")
-        
+            logging.error(f"Error updating project metadata {project_id}: {e}")
+
         return False
     
     def _get_directory_size(self, directory):
