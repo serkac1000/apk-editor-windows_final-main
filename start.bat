@@ -6,26 +6,57 @@ echo APK Editor Pro - Automatic Setup
 echo ========================================
 echo.
 
-REM Check if Python is installed
+REM Check if Python is installed and find the path
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo ERROR: Python is not installed or not in PATH
+    echo Python not found in PATH, searching for Python installation...
+    
+    REM Common Python installation paths
+    set "PYTHON_PATHS=C:\Python312\python.exe"
+    set "PYTHON_PATHS=%PYTHON_PATHS% C:\Python311\python.exe"
+    set "PYTHON_PATHS=%PYTHON_PATHS% C:\Python310\python.exe"
+    set "PYTHON_PATHS=%PYTHON_PATHS% C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python312\python.exe"
+    set "PYTHON_PATHS=%PYTHON_PATHS% C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311\python.exe"
+    set "PYTHON_PATHS=%PYTHON_PATHS% C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310\python.exe"
+    set "PYTHON_PATHS=%PYTHON_PATHS% %LOCALAPPDATA%\Programs\Python\Python312\python.exe"
+    set "PYTHON_PATHS=%PYTHON_PATHS% %LOCALAPPDATA%\Programs\Python\Python311\python.exe"
+    set "PYTHON_PATHS=%PYTHON_PATHS% %LOCALAPPDATA%\Programs\Python\Python310\python.exe"
+    
+    set "PYTHON_EXE="
+    for %%p in (%PYTHON_PATHS%) do (
+        if exist "%%p" (
+            set "PYTHON_EXE=%%p"
+            goto :found_python
+        )
+    )
+    
+    echo ERROR: Python installation not found
     echo Please install Python 3.8+ from https://python.org
+    echo Or add Python to your system PATH
     pause
     exit /b 1
+    
+    :found_python
+    echo Found Python at: %PYTHON_EXE%
+    set "PATH=%PATH%;%PYTHON_EXE%"
+) else (
+    set "PYTHON_EXE=python"
+    echo Python found in PATH: OK
 )
 
 REM Check if pip is available
-pip --version >nul 2>&1
+"%PYTHON_EXE%" -m pip --version >nul 2>&1
 if errorlevel 1 (
     echo ERROR: pip is not available
     echo Please reinstall Python with pip included
     pause
     exit /b 1
+) else (
+    echo pip found: OK
 )
 
 echo [1/6] Installing Python dependencies...
-pip install flask werkzeug requests --quiet
+"%PYTHON_EXE%" -m pip install flask werkzeug requests --quiet
 if errorlevel 1 (
     echo WARNING: Some Python packages may have failed to install
 )
@@ -115,7 +146,7 @@ set FLASK_ENV=development
 set FLASK_DEBUG=1
 
 REM Start the Flask application
-python main.py
+"%PYTHON_EXE%" main.py
 
 echo.
 echo Server stopped. Press any key to exit...
