@@ -340,7 +340,25 @@ class APKEditor:
 
     def save_layout_resource(self, project_id, resource_path, content):
         """Save layout resource"""
-        return self.save_string_resource(project_id, resource_path, content)
+        try:
+            project_dir = os.path.join(self.projects_folder, project_id)
+            decompiled_dir = os.path.join(project_dir, 'decompiled')
+            file_path = os.path.join(decompiled_dir, resource_path)
+
+            # Ensure directory exists
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
+
+            # Save content
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(content)
+
+            logging.info(f"Layout resource saved: {resource_path}")
+            return True
+
+        except Exception as e:
+            logging.error(f"Error saving layout resource: {str(e)}")
+            return False
+
 
     def compile_apk(self, project_id):
         """Compile modified APK"""
@@ -443,6 +461,33 @@ class APKEditor:
 
         return None
 
-    def sign_apk_advanced(self, input_apk, output_apk):
-        """Advanced APK signing with proper validation"""
-        return self.apktool.sign_apk(input_apk, output_apk)
+    def sign_apk_advanced(self, compiled_apk_path, output_path):
+        """Advanced APK signing with proper certificate chain"""
+        try:
+            return self.apktool.sign_apk(compiled_apk_path, output_path)
+        except Exception as e:
+            logging.error(f"Error signing APK: {str(e)}")
+            return False
+
+    def force_save_project(self, project_id):
+        """Force save all project changes to ensure persistence"""
+        try:
+            project_dir = os.path.join(self.projects_folder, project_id)
+            if os.path.exists(project_dir):
+                # Force sync all files in project directory
+                for root, dirs, files in os.walk(project_dir):
+                    for file in files:
+                        file_path = os.path.join(root, file)
+                        try:
+                            with open(file_path, 'r+b') as f:
+                                f.flush()
+                                os.fsync(f.fileno())
+                        except Exception:
+                            pass  # Skip files that can't be synced
+
+                logging.info(f"Project {project_id} force saved successfully")
+                return True
+            return False
+        except Exception as e:
+            logging.error(f"Error force saving project {project_id}: {str(e)}")
+            return False

@@ -298,8 +298,9 @@ class APKEditor {
         document.body.removeChild(textArea);
     }
 }
+}
 
-// Initialize APK Editor when DOM is loaded
+// Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     window.APKEditor = new APKEditor();
 });

@@ -167,8 +167,10 @@ def edit_resource(project_id, resource_type, resource_path):
 
 @app.route('/save_resource/<project_id>/<resource_type>/<path:resource_path>', methods=['POST'])
 def save_resource(project_id, resource_type, resource_path):
-    """Save edited resource"""
+    """Save edited resource with proper persistence"""
     try:
+        success = False
+        
         if resource_type == 'image':
             # Handle image upload
             if 'image_file' in request.files:
@@ -176,7 +178,14 @@ def save_resource(project_id, resource_type, resource_path):
                 if file.filename != '':
                     success = apk_editor.save_image_resource(project_id, resource_path, file)
                     if success:
-                        flash('Image updated successfully!', 'success')
+                        # Update project metadata to mark as modified
+                        file_manager.update_project_metadata(project_id, {
+                            'last_modified': datetime.now().isoformat(),
+                            'status': 'modified',
+                            'last_resource_edited': resource_path,
+                            'last_edit_type': 'image'
+                        })
+                        flash('Image updated and saved successfully!', 'success')
                     else:
                         flash('Failed to update image', 'error')
 
@@ -185,7 +194,15 @@ def save_resource(project_id, resource_type, resource_path):
             content = request.form.get('content', '')
             success = apk_editor.save_string_resource(project_id, resource_path, content)
             if success:
-                flash('String updated successfully!', 'success')
+                # Update project metadata to mark as modified
+                file_manager.update_project_metadata(project_id, {
+                    'last_modified': datetime.now().isoformat(),
+                    'status': 'modified',
+                    'last_resource_edited': resource_path,
+                    'last_edit_type': 'string',
+                    'last_content_preview': content[:50] + '...' if len(content) > 50 else content
+                })
+                flash('String updated and saved successfully!', 'success')
             else:
                 flash('Failed to update string', 'error')
 
@@ -194,9 +211,23 @@ def save_resource(project_id, resource_type, resource_path):
             content = request.form.get('content', '')
             success = apk_editor.save_layout_resource(project_id, resource_path, content)
             if success:
-                flash('Layout updated successfully!', 'success')
+                # Update project metadata to mark as modified
+                file_manager.update_project_metadata(project_id, {
+                    'last_modified': datetime.now().isoformat(),
+                    'status': 'modified',
+                    'last_resource_edited': resource_path,
+                    'last_edit_type': 'layout',
+                    'last_content_preview': 'XML Layout Modified'
+                })
+                flash('Layout updated and saved successfully!', 'success')
             else:
                 flash('Failed to update layout', 'error')
+
+        # Force file system sync to ensure changes are written
+        if success:
+            import os
+            os.sync() if hasattr(os, 'sync') else None
+            logging.info(f"Resource {resource_path} saved and synced to disk")
 
         return redirect(url_for('edit_resource', 
                                project_id=project_id, 
@@ -1079,4 +1110,5 @@ def bad_request(e):
     return "SSL connection not supported. Please use HTTP instead of HTTPS.", 400
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    app.run(debug=True, host='0.0.0.0', port=port)
