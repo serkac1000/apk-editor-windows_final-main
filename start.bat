@@ -6,42 +6,17 @@ echo APK Editor Pro - Automatic Setup
 echo ========================================
 echo.
 
-REM Check if Python is installed and find the path
-python --version >nul 2>&1
-if errorlevel 1 (
-    echo Python not found in PATH, searching for Python installation...
-    
-    REM Common Python installation paths
-    set "PYTHON_PATHS=C:\Python312\python.exe"
-    set "PYTHON_PATHS=%PYTHON_PATHS% C:\Python311\python.exe"
-    set "PYTHON_PATHS=%PYTHON_PATHS% C:\Python310\python.exe"
-    set "PYTHON_PATHS=%PYTHON_PATHS% C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python312\python.exe"
-    set "PYTHON_PATHS=%PYTHON_PATHS% C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python311\python.exe"
-    set "PYTHON_PATHS=%PYTHON_PATHS% C:\Users\%USERNAME%\AppData\Local\Programs\Python\Python310\python.exe"
-    set "PYTHON_PATHS=%PYTHON_PATHS% %LOCALAPPDATA%\Programs\Python\Python312\python.exe"
-    set "PYTHON_PATHS=%PYTHON_PATHS% %LOCALAPPDATA%\Programs\Python\Python311\python.exe"
-    set "PYTHON_PATHS=%PYTHON_PATHS% %LOCALAPPDATA%\Programs\Python\Python310\python.exe"
-    
-    set "PYTHON_EXE="
-    for %%p in (%PYTHON_PATHS%) do (
-        if exist "%%p" (
-            set "PYTHON_EXE=%%p"
-            goto :found_python
-        )
-    )
-    
-    echo ERROR: Python installation not found
-    echo Please install Python 3.8+ from https://python.org
-    echo Or add Python to your system PATH
+REM Use hardcoded Python path
+set "PYTHON_EXE=C:\Users\serka\AppData\Local\Programs\Python\Python312\python.exe"
+
+REM Check if Python exists at hardcoded path
+if not exist "%PYTHON_EXE%" (
+    echo ERROR: Python not found at: %PYTHON_EXE%
+    echo Please verify Python is installed at this location
     pause
     exit /b 1
-    
-    :found_python
-    echo Found Python at: %PYTHON_EXE%
-    set "PATH=%PATH%;%PYTHON_EXE%"
 ) else (
-    set "PYTHON_EXE=python"
-    echo Python found in PATH: OK
+    echo Python found at: %PYTHON_EXE%
 )
 
 REM Check if pip is available
